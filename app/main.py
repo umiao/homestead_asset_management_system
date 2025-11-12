@@ -2,8 +2,10 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+import json
 
 from .database import create_db_and_tables
 from .routers import inventory, import_data
@@ -14,6 +16,20 @@ app = FastAPI(
     description="Household Asset Management System",
     version="1.0.0"
 )
+
+# Add middleware to ensure UTF-8 encoding
+@app.middleware("http")
+async def add_utf8_header(request: Request, call_next):
+    response = await call_next(request)
+    # Ensure UTF-8 encoding for all responses
+    if "content-type" in response.headers:
+        content_type = response.headers["content-type"]
+        if "charset" not in content_type:
+            if "application/json" in content_type:
+                response.headers["content-type"] = "application/json; charset=utf-8"
+            elif "text/html" in content_type:
+                response.headers["content-type"] = "text/html; charset=utf-8"
+    return response
 
 # Mount static files
 static_dir = Path(__file__).parent / "static"

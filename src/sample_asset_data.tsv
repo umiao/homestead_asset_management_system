@@ -1,57 +1,48 @@
 name	category	quantity	unit	location_path	acquired_date	expiry_date	notes
-Whole Milk	Dairy	1	gallon	Kitchen > Fridge > Main Shelf	2025-01-08	2025-01-15	Organic
-Cheddar Cheese	Dairy	500	g	Kitchen > Fridge > Cheese Drawer	2025-01-05	2025-02-05	Sharp cheddar
-Greek Yogurt	Dairy	4	cups	Kitchen > Fridge > Main Shelf	2025-01-10	2025-01-20	Plain
-Eggs	Protein	12	count	Kitchen > Fridge > Door	2025-01-09	2025-02-09	Large, Grade A
-Chicken Breast	Protein	1.5	kg	Kitchen > Freezer > Meat Section	2025-01-06	2025-03-06	Raw, frozen
-Ground Beef	Protein	1	kg	Kitchen > Freezer > Meat Section	2025-01-07	2025-03-07	80/20 lean
-Salmon Fillet	Protein	600	g	Kitchen > Freezer > Meat Section	2025-01-05	2025-02-05	Wild caught
-Spinach	Vegetables	300	g	Kitchen > Fridge > Crisper	2025-01-11	2025-01-16	Fresh
-Carrots	Vegetables	1	kg	Kitchen > Fridge > Crisper	2025-01-09	2025-01-25	Organic
-Tomatoes	Vegetables	6	count	Kitchen > Counter > Fruit Bowl	2025-01-10	2025-01-17	Roma tomatoes
-Onions	Vegetables	5	count	Kitchen > Pantry > Lower Shelf	2025-01-05	2025-02-05	Yellow onions
-Potatoes	Vegetables	2	kg	Kitchen > Pantry > Lower Shelf	2025-01-03	2025-02-03	Russet
-Apples	Fruits	8	count	Kitchen > Counter > Fruit Bowl	2025-01-09	2025-01-23	Gala
-Bananas	Fruits	6	count	Kitchen > Counter > Fruit Bowl	2025-01-11	2025-01-14	Ripe
-Oranges	Fruits	10	count	Kitchen > Fridge > Crisper	2025-01-08	2025-01-22	Navel
-Strawberries	Fruits	500	g	Kitchen > Fridge > Main Shelf	2025-01-11	2025-01-14	Fresh
-Bread	Bakery	1	loaf	Kitchen > Pantry > Bread Box	2025-01-10	2025-01-17	Whole wheat
-Pasta	Grains	500	g	Kitchen > Pantry > Upper Shelf	2024-06-15	2026-06-15	Penne
-Rice	Grains	2	kg	Kitchen > Pantry > Upper Shelf	2024-08-20	2026-08-20	Basmati
-Cereal	Grains	1	box	Kitchen > Pantry > Upper Shelf	2024-12-10	2025-06-10	Corn flakes
-Olive Oil	Condiments	750	ml	Kitchen > Pantry > Oil Shelf	2024-09-15	2026-09-15	Extra virgin
-Soy Sauce	Condiments	500	ml	Kitchen > Pantry > Sauce Shelf	2024-11-20	2026-11-20	Low sodium
-Ketchup	Condiments	500	ml	Kitchen > Fridge > Door	2024-12-01	2025-12-01	Heinz
-Mustard	Condiments	350	ml	Kitchen > Fridge > Door	2024-11-15	2025-11-15	Dijon
-Coffee	Beverages	500	g	Kitchen > Pantry > Upper Shelf	2024-12-20	2025-06-20	Ground, medium roast
-Orange Juice	Beverages	1	liter	Kitchen > Fridge > Main Shelf	2025-01-11	2025-01-18	Fresh squeezed
-Sparkling Water	Beverages	12	cans	Kitchen > Pantry > Lower Shelf	2024-10-05	2025-10-05	LaCroix
-Dish Soap	Cleaning	1	bottle	Kitchen > Under Sink > Left Side	2024-11-30	2026-11-30	Dawn
-Sponges	Cleaning	6	count	Kitchen > Under Sink > Left Side	2025-01-05	2027-01-05	Scrub daddy
-Trash Bags	Cleaning	30	count	Kitchen > Under Sink > Right Side	2024-12-15	2027-12-15	13 gallon
-Paper Towels	Cleaning	6	rolls	Kitchen > Pantry > Lower Shelf	2025-01-08	2027-01-08	Bounty
-All-Purpose Cleaner	Cleaning	1	bottle	Bathroom > Under Sink > Cleaning Caddy	2024-10-20	2026-10-20	Lysol
-Toilet Paper	Bathroom	12	rolls	Bathroom > Cabinet > Lower Shelf	2025-01-06	2027-01-06	Charmin
-Shampoo	Personal Care	500	ml	Bathroom > Shower > Shelf	2024-12-10	2026-12-10	Herbal essences
-Toothpaste	Personal Care	150	ml	Bathroom > Cabinet > Upper Shelf	2024-11-25	2025-11-25	Colgate
-Hand Soap	Personal Care	300	ml	Bathroom > Sink > Dispenser	2024-12-20	2025-12-20	Method
-Laundry Detergent	Cleaning	2	liter	Laundry Room > Shelf > Upper	2024-11-01	2026-11-01	Tide
-Fabric Softener	Cleaning	1.5	liter	Laundry Room > Shelf > Upper	2024-11-05	2026-11-05	Downy
-Phillips Screwdriver	Tools	1	piece	Garage > Toolbox > Drawer 1	2020-05-10		Standard size
-Flathead Screwdriver	Tools	1	piece	Garage > Toolbox > Drawer 1	2020-05-10		Standard size
-Hammer	Tools	1	piece	Garage > Toolbox > Main Section	2019-03-15		16 oz claw
-Measuring Tape	Tools	1	piece	Garage > Toolbox > Drawer 2	2021-02-20		25 ft
-Duct Tape	Tools	1	roll	Garage > Shelf > Middle	2024-08-12		Silver
-AA Batteries	Electronics	8	count	Living Room > Drawer > Electronics	2024-10-30	2029-10-30	Duracell
-AAA Batteries	Electronics	8	count	Living Room > Drawer > Electronics	2024-10-30	2029-10-30	Duracell
-Extension Cord	Electronics	1	piece	Garage > Shelf > Upper	2022-01-05		15 ft, 3-prong
-Light Bulbs	Electronics	4	count	Garage > Shelf > Upper	2024-09-15		LED, 60W equivalent
-Flashlight	Electronics	1	piece	Living Room > Drawer > Electronics	2023-07-10		LED, rechargeable
-First Aid Kit	Medical	1	kit	Bathroom > Cabinet > Upper Shelf	2023-06-15	2025-06-15	Includes bandages
-Pain Reliever	Medical	100	tablets	Bathroom > Cabinet > Medicine Box	2024-09-20	2026-09-20	Ibuprofen
-Band-Aids	Medical	50	count	Bathroom > Cabinet > Medicine Box	2024-11-10	2027-11-10	Assorted sizes
-Notebooks	Office	5	count	Home Office > Desk > Drawer 1	2024-09-01		College ruled
-Pens	Office	12	count	Home Office > Desk > Organizer	2024-08-15		Black ink
-Printer Paper	Office	1	ream	Home Office > Cabinet > Lower Shelf	2024-07-20		500 sheets, letter
-Stapler	Office	1	piece	Home Office > Desk > Organizer	2021-05-10		Standard
-Paper Clips	Office	100	count	Home Office > Desk > Drawer 2	2023-03-12		Standard size
+鞋子和拖鞋	鞋子	若干	个	阳台	11/12/2025	11/12/2030	放置在固定资产鞋柜内
+大型纸板	瓦楞纸	1	个	阳台	11/12/2025	11/12/2030	可做模型制作的衬板，上覆电视的塑料套袋
+工具箱	工具	1	套	阳台	11/12/2025	11/12/2030	附带电钻的套装
+平衡板	健康	1	个	阳台	11/12/2025	11/12/2030	用于锻炼核心
+升降桌角保护套	运输/杂物	8	个	阳台	11/12/2025	11/12/2030	无
+伞	雨伞	1	个	阳台	11/12/2025	11/12/2030	无
+Herman Miller运输袋	运输/杂物	1	个	阳台	11/12/2025	11/12/2030	无
+气泡纸	运输/杂物	1	卷	阳台	11/12/2025	11/12/2030	无
+喷油壶替换嘴	油壶配件	2	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+威远号模型盒	模型运输盒	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+ebay水壶、收纳产品	ebay swag	若干	件	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+备用鞋带	杂物	1	对	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+备用魔术贴	杂物	1	套	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+透明胶	杂物	1	卷	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+手机贴膜刮板	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+充电宝	工具	2	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+十字螺丝刀	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+体温计	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+精准镊子（电子设备用）	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+美标插座转接头	工具	3	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+塑料绑带	工具	若干	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+塑料直尺	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+回形针	工具	100	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+主人徽章	工具	9	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+指甲钳	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+牛角梳	工具	1	个	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+USB A - （Android - C - lightning）转接线	工具	1	条	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+防水手机套	手机保护套	2	个	厨房 > 冰箱上柜（1号柜）左侧外侧	11/12/2025	11/12/2030	无
+笔记本	书簿	9	本	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+冰袖	防晒	3	对	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2030	无
+会辰送的费列罗	巧克力	1	盒	厨房 > 冰箱上柜（1号柜）	11/12/2025	11/12/2026	无
+电器和家具说明书/备件	说明书/配件	若干	份	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+蓬荜生辉灯遥控器专用电池	电池	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+LG显示屏保修证明	说明书/配件	1	份	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+LG显示屏HDMI	数据线	1	条	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+拍立得展示架专用灯光电池	电池	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+中式菜刀	厨具	1	把	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+胡桃夹子 - 海鲜钳子	厨具	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+开瓶器	厨具	2	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+多用刨子（鱼鳞、蔬果）	厨具	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+打火机	厨具	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+剪刀	厨具	1	把	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+陶瓷刀组合	厨具	5	把	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+烧烤钳	厨具	1	把	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+果蔬刀	厨具	1	把	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+DVD光驱	电脑配件	1	个	厨房 > 冰箱右柜（2号柜）（上）	11/12/2025	11/12/2030	无
+

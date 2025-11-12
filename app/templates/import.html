@@ -115,15 +115,21 @@
     }
 
     async function importSampleFile() {
-        // Get the absolute path to the sample file
-        const samplePath = 'C:\\Users\\Shenghui Xu\\Desktop\\Gen_AI_Proj\\homestead_asset_management_system\\src\\sample_asset_data.tsv';
+        // Use relative path from server's working directory
+        const samplePath = 'src/sample_asset_data.tsv';
 
         try {
-            const result = await fetchAPI('/import/tsv/file-path', {
+            const response = await fetch('/api/import/tsv/file-path', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file_path: samplePath, household_id: 1 })
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
 
             displayImportResults(result);
 
