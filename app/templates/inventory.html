@@ -18,6 +18,7 @@
             <option value="expiring_soon">Expiring Soon</option>
             <option value="expired">Expired</option>
             <option value="no_expiry">No Expiry</option>
+            <option value="n/a">N/A (Non-Food)</option>
         </select>
         <button onclick="searchItems()" class="btn btn-primary">Search</button>
         <button onclick="showAddModal()" class="btn btn-success">➕ Add Item</button>
@@ -118,6 +119,49 @@
         </form>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: 2rem;">
+        <div class="card-header">
+            <h3 class="card-title">出库确认 / Checkout Confirmation</h3>
+            <button onclick="closeDeleteModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        <form id="delete-form" onsubmit="confirmDelete(event)">
+            <div id="delete-items-list" style="margin-bottom: 1rem; padding: 1rem; background-color: var(--light-bg); border-radius: 0.5rem;">
+                <!-- Item list will be populated here -->
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">出库原因 / Reason for Removal *</label>
+                <select id="delete-reason" class="form-select" required onchange="toggleCustomReason()">
+                    <option value="">请选择 / Please select</option>
+                    <option value="已消耗 / Consumed">已消耗 / Consumed</option>
+                    <option value="过期丢弃 / Expired">过期丢弃 / Expired</option>
+                    <option value="损坏 / Damaged">损坏 / Damaged</option>
+                    <option value="转移 / Transferred">转移 / Transferred</option>
+                    <option value="捐赠 / Donated">捐赠 / Donated</option>
+                    <option value="其他 / Other">其他 / Other</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="custom-reason-group" style="display: none;">
+                <label class="form-label">请说明 / Please specify</label>
+                <input type="text" id="custom-reason" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">出库记录 / Checkout Record (可选 / Optional)</label>
+                <textarea id="checkout-record" class="form-textarea" rows="3" placeholder="例如: 用于晚餐烹饪 / E.g., Used for dinner cooking"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary">取消 / Cancel</button>
+                <button type="submit" class="btn btn-danger">确认删除 / Confirm Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -125,6 +169,7 @@
     let allItems = [];
     let allLocations = [];
     let selectedLocationId = null;
+    let itemsToDelete = []; // Track items pending deletion
 
     async function loadInventory() {
         try {
@@ -382,7 +427,7 @@
         }
     }
 
-    async function deleteSelected() {
+    function deleteSelected() {
         const checkboxes = document.querySelectorAll('.item-checkbox:checked');
         const itemIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
@@ -391,30 +436,105 @@
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete ${itemIds.length} item(s)?`)) {
+        // Get items to delete
+        itemsToDelete = allItems.filter(item => itemIds.includes(item.id));
+        showDeleteModal();
+    }
+
+    function deleteItem(itemId) {
+        // Get the item
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) {
+            showMessage('Item not found', 'error');
             return;
+        }
+
+        itemsToDelete = [item];
+        showDeleteModal();
+    }
+
+    function showDeleteModal() {
+        const modal = document.getElementById('delete-modal');
+        const itemsList = document.getElementById('delete-items-list');
+
+        // Display items to be deleted
+        itemsList.innerHTML = `
+            <strong>待删除物品 / Items to Delete:</strong>
+            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                ${itemsToDelete.map(item => `
+                    <li>${item.name} - ${item.quantity} ${item.unit}</li>
+                `).join('')}
+            </ul>
+        `;
+
+        modal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('delete-modal');
+        modal.style.display = 'none';
+
+        // Reset form
+        document.getElementById('delete-form').reset();
+        document.getElementById('custom-reason-group').style.display = 'none';
+        itemsToDelete = [];
+    }
+
+    function toggleCustomReason() {
+        const reasonSelect = document.getElementById('delete-reason');
+        const customReasonGroup = document.getElementById('custom-reason-group');
+        const customReasonInput = document.getElementById('custom-reason');
+
+        if (reasonSelect.value === '其他 / Other') {
+            customReasonGroup.style.display = 'block';
+            customReasonInput.required = true;
+        } else {
+            customReasonGroup.style.display = 'none';
+            customReasonInput.required = false;
+        }
+    }
+
+    async function confirmDelete(event) {
+        event.preventDefault();
+
+        const reasonSelect = document.getElementById('delete-reason');
+        const customReason = document.getElementById('custom-reason').value;
+        const checkoutRecord = document.getElementById('checkout-record').value;
+
+        // Get final reason
+        let reason = reasonSelect.value;
+        if (reason === '其他 / Other' && customReason) {
+            reason = customReason;
         }
 
         try {
             let successCount = 0;
             let errorCount = 0;
 
-            for (const itemId of itemIds) {
+            for (const item of itemsToDelete) {
                 try {
-                    await fetchAPI(`/inventory/items/${itemId}`, {
-                        method: 'DELETE'
+                    await fetchAPI(`/inventory/items/${item.id}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            reason: reason,
+                            checkout_record: checkoutRecord
+                        })
                     });
                     successCount++;
                 } catch (error) {
+                    console.error(`Error deleting item ${item.id}:`, error);
                     errorCount++;
                 }
             }
 
+            closeDeleteModal();
+
             if (successCount > 0) {
-                showMessage(`Successfully deleted ${successCount} item(s)`, 'success');
+                showMessage(`成功删除 ${successCount} 件物品 / Successfully deleted ${successCount} item(s)`, 'success');
             }
             if (errorCount > 0) {
-                showMessage(`Failed to delete ${errorCount} item(s)`, 'error');
+                showMessage(`删除失败 ${errorCount} 件 / Failed to delete ${errorCount} item(s)`, 'error');
             }
 
             await loadInventory();
@@ -427,29 +547,11 @@
                 const checkboxes = document.querySelectorAll('.item-checkbox');
                 checkboxes.forEach(cb => cb.checked = false);
 
-                updateSelectedCount();  // This will hide the Delete Selected button
+                updateSelectedCount();
             }, 100);
         } catch (error) {
             console.error('Error deleting items:', error);
-            showMessage('Error deleting items', 'error');
-        }
-    }
-
-    async function deleteItem(itemId) {
-        if (!confirm('Are you sure you want to delete this item?')) {
-            return;
-        }
-
-        try {
-            await fetchAPI(`/inventory/items/${itemId}`, {
-                method: 'DELETE'
-            });
-
-            showMessage('Item deleted successfully', 'success');
-            loadInventory();
-        } catch (error) {
-            console.error('Error deleting item:', error);
-            showMessage('Error deleting item', 'error');
+            showMessage('删除物品时出错 / Error deleting items', 'error');
         }
     }
 
@@ -464,11 +566,22 @@
                 searchItems();
             }
         });
+
+        // Check if we should open add item modal
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'add') {
+            showAddModal();
+            // Remove the query parameter from URL without refreshing
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     });
 
-    // Close modal on escape key
+    // Close modals on escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') {
+            closeModal();
+            closeDeleteModal();
+        }
     });
 </script>
 {% endblock %}

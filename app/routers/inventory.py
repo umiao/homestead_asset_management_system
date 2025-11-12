@@ -1,14 +1,42 @@
 """Inventory management endpoints."""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlmodel import Session
-from datetime import date
+from datetime import date, datetime
+from pydantic import BaseModel
+import logging
+import os
 
 from ..database import get_session
-from ..models import Item
+from ..models import Item, Event
 from .. import crud
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
+
+# Setup logging for deletions
+log_dir = "logs"
+os.makedirs(log_dir, exist_ok=True)
+deletion_logger = logging.getLogger("inventory_deletions")
+deletion_logger.setLevel(logging.INFO)
+
+# Create file handler
+log_file = os.path.join(log_dir, "item_deletions.log")
+file_handler = logging.FileHandler(log_file, encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+file_handler.setFormatter(formatter)
+deletion_logger.addHandler(file_handler)
+
+
+class DeleteItemRequest(BaseModel):
+    """Request model for item deletion with reason."""
+    reason: str
+    checkout_record: Optional[str] = None
 
 
 @router.get("/items", response_model=List[Item])
@@ -103,12 +131,54 @@ def update_item(
 
 
 @router.delete("/items/{item_id}")
-def delete_item(item_id: int, session: Session = Depends(get_session)):
-    """Delete item."""
+def delete_item(
+    item_id: int,
+    delete_request: DeleteItemRequest,
+    session: Session = Depends(get_session)
+):
+    """Delete item with reason and logging."""
+    # Get item details before deletion
+    item = crud.get_item(session, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Create deletion event
+    event = Event(
+        item_id=item_id,
+        event_type="delete",
+        quantity_change=-item.quantity,
+        notes=f"出库原因: {delete_request.reason}\n出库记录: {delete_request.checkout_record or 'N/A'}"
+    )
+    session.add(event)
+    session.commit()
+
+    # Log the deletion
+    log_message = (
+        f"删除物品 | "
+        f"ID: {item.id} | "
+        f"名称: {item.name} | "
+        f"类别: {item.category} | "
+        f"数量: {item.quantity} {item.unit} | "
+        f"位置: {item.location.get_full_path() if item.location else 'Unknown'} | "
+        f"出库原因: {delete_request.reason} | "
+        f"出库记录: {delete_request.checkout_record or 'N/A'}"
+    )
+    deletion_logger.info(log_message)
+
+    # Delete the item
     success = crud.delete_item(session, item_id)
     if not success:
         raise HTTPException(status_code=404, detail="Item not found")
-    return {"message": "Item deleted successfully"}
+
+    return {
+        "message": "Item deleted successfully",
+        "deleted_item": {
+            "id": item.id,
+            "name": item.name,
+            "quantity": item.quantity,
+            "unit": item.unit
+        }
+    }
 
 
 @router.get("/expiring", response_model=List[Item])

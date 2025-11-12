@@ -13,7 +13,7 @@
             <div class="header-content">
                 <a href="/" class="logo">
                     <span class="logo-icon">🏠</span>
-                    <span>PantryPilot</span>
+                    <span>家庭资产管理盘存系统</span>
                 </a>
                 <nav>
                     <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
@@ -65,9 +65,10 @@
                 'fresh': 'badge-fresh',
                 'expiring_soon': 'badge-expiring',
                 'expired': 'badge-expired',
-                'no_expiry': 'badge-no-expiry'
+                'no_expiry': 'badge-no-expiry',
+                'n/a': 'badge-secondary'
             };
-            return badges[expiryStatus] || 'badge-no-expiry';
+            return badges[expiryStatus] || 'badge-secondary';
         }
 
         function getExpiryLabel(expiryStatus) {
@@ -75,9 +76,10 @@
                 'fresh': 'Fresh',
                 'expiring_soon': 'Expiring Soon',
                 'expired': 'Expired',
-                'no_expiry': 'No Expiry'
+                'no_expiry': 'No Expiry',
+                'n/a': 'N/A'
             };
-            return labels[expiryStatus] || 'Unknown';
+            return labels[expiryStatus] || 'N/A';
         }
     </script>
 

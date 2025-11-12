@@ -1,0 +1,5 @@
+# Ignore any file ending with .db
+*.db
+
+# Also ignore files that literally end with 'db' (no dot before)
+*db

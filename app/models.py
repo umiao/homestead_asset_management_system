@@ -86,7 +86,16 @@ class Item(SQLModel, table=True):
 
     @property
     def expiry_status(self) -> str:
-        """Get expiry status: expired, expiring_soon, fresh, or no_expiry."""
+        """Get expiry status: expired, expiring_soon, fresh, no_expiry, or n/a."""
+        # Check if item is food-related
+        food_categories = ["食物", "food", "Food", "食品", "饮料", "Drink", "drinks"]
+        is_food = self.category.lower() in [c.lower() for c in food_categories]
+
+        # For non-food items, return n/a
+        if not is_food:
+            return "n/a"
+
+        # For food items, check expiry date
         if not self.expiry_date:
             return "no_expiry"
         days = self.days_until_expiry
