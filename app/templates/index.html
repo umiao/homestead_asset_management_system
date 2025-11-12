@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PantryPilot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Items</div>
+        <div class="stat-value" id="stat-total">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+        <div class="stat-label">Expiring Soon</div>
+        <div class="stat-value" id="stat-expiring">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <div class="stat-label">Categories</div>
+        <div class="stat-value" id="stat-categories">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+        <div class="stat-label">Locations</div>
+        <div class="stat-value" id="stat-locations">0</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Quick Actions</h2>
+    </div>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="/inventory" class="btn btn-primary">📦 View Inventory</a>
+        <a href="/import" class="btn btn-success">📥 Import Data</a>
+        <a href="/alerts" class="btn btn-secondary">⚠️ View Alerts</a>
+        <button onclick="addNewItem()" class="btn btn-primary">➕ Add Item</button>
+    </div>
+</div>
+
+<!-- Recent Items -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent Items</h2>
+    </div>
+    <div id="recent-items-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<!-- Category Breakdown -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Category Breakdown</h2>
+    </div>
+    <div id="category-breakdown">
+        <div class="spinner"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDashboard() {
+        try {
+            // Load all items
+            const items = await fetchAPI('/inventory/items?limit=1000');
+
+            // Update stats
+            document.getElementById('stat-total').textContent = items.length;
+
+            // Count expiring soon
+            const expiringSoon = items.filter(item => item.expiry_status === 'expiring_soon' || item.expiry_status === 'expired');
+            document.getElementById('stat-expiring').textContent = expiringSoon.length;
+
+            // Count categories
+            const categories = new Set(items.map(item => item.category));
+            document.getElementById('stat-categories').textContent = categories.size;
+
+            // Load locations
+            const locations = await fetchAPI('/inventory/locations');
+            document.getElementById('stat-locations').textContent = locations.length;
+
+            // Display recent items (last 10)
+            displayRecentItems(items.slice(0, 10));
+
+            // Display category breakdown
+            displayCategoryBreakdown(items);
+
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            showMessage('Error loading dashboard data', 'error');
+        }
+    }
+
+    function displayRecentItems(items) {
+        const container = document.getElementById('recent-items-container');
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-title">No items yet</div>
+                    <p>Start by importing data or adding items manually</p>
+                </div>
+            `;
+            return;
+        }
+
+        const table = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Expiry Status</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td style="font-weight: 600;">${item.name}</td>
+                                <td>${item.category}</td>
+                                <td>${item.quantity} ${item.unit}</td>
+                                <td>
+                                    <span class="badge ${getExpiryBadge(item.expiry_status)}">
+                                        ${getExpiryLabel(item.expiry_status)}
+                                    </span>
+                                </td>
+                                <td style="font-size: 0.875rem; color: var(--text-secondary);">
+                                    ${item.location ? 'Location ID: ' + item.location_id : 'No location'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = table;
+    }
+
+    function displayCategoryBreakdown(items) {
+        const container = document.getElementById('category-breakdown');
+
+        // Group by category
+        const categoryMap = {};
+        items.forEach(item => {
+            if (!categoryMap[item.category]) {
+                categoryMap[item.category] = 0;
+            }
+            categoryMap[item.category]++;
+        });
+
+        const categories = Object.entries(categoryMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        if (categories.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary);">No categories yet</p>';
+            return;
+        }
+
+        const maxCount = Math.max(...categories.map(c => c[1]));
+
+        const html = categories.map(([category, count]) => {
+            const percentage = (count / maxCount) * 100;
+            return `
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 500;">${category}</span>
+                        <span style="color: var(--text-secondary);">${count} items</span>
+                    </div>
+                    <div style="background-color: var(--light-bg); border-radius: 9999px; height: 8px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    function addNewItem() {
+        window.location.href = '/inventory';
+    }
+
+    // Load dashboard on page load
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

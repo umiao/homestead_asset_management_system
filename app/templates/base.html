@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PantryPilot - Household Asset Management{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <span class="logo-icon">🏠</span>
+                    <span>PantryPilot</span>
+                </a>
+                <nav>
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+                    <a href="/inventory" class="nav-link {% if request.url.path == '/inventory' %}active{% endif %}">Inventory</a>
+                    <a href="/import" class="nav-link {% if request.url.path == '/import' %}active{% endif %}">Import</a>
+                    <a href="/alerts" class="nav-link {% if request.url.path == '/alerts' %}active{% endif %}">Alerts</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        // Utility functions
+        const API_BASE = '/api';
+
+        async function fetchAPI(endpoint, options = {}) {
+            const response = await fetch(`${API_BASE}${endpoint}`, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        function showMessage(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString();
+        }
+
+        function getExpiryBadge(expiryStatus) {
+            const badges = {
+                'fresh': 'badge-fresh',
+                'expiring_soon': 'badge-expiring',
+                'expired': 'badge-expired',
+                'no_expiry': 'badge-no-expiry'
+            };
+            return badges[expiryStatus] || 'badge-no-expiry';
+        }
+
+        function getExpiryLabel(expiryStatus) {
+            const labels = {
+                'fresh': 'Fresh',
+                'expiring_soon': 'Expiring Soon',
+                'expired': 'Expired',
+                'no_expiry': 'No Expiry'
+            };
+            return labels[expiryStatus] || 'Unknown';
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

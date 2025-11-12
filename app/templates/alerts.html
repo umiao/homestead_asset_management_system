@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts - PantryPilot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Expiration Alerts</h1>
+
+<!-- Alert Summary -->
+<div class="stats-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        <div class="stat-label">Expired Items</div>
+        <div class="stat-value" id="stat-expired">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        <div class="stat-label">Expiring in 3 Days</div>
+        <div class="stat-value" id="stat-expiring-3">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">
+        <div class="stat-label">Expiring in 7 Days</div>
+        <div class="stat-value" id="stat-expiring-7">0</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <div class="stat-label">Fresh Items</div>
+        <div class="stat-value" id="stat-fresh">0</div>
+    </div>
+</div>
+
+<!-- Filter by Days -->
+<div class="card">
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <label style="font-weight: 500;">Show items expiring within:</label>
+        <select id="days-filter" class="form-select" style="width: 200px;" onchange="loadAlerts()">
+            <option value="3">3 days</option>
+            <option value="7" selected>7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+        </select>
+        <button onclick="loadAlerts()" class="btn btn-primary">Refresh</button>
+    </div>
+</div>
+
+<!-- Expired Items -->
+<div class="card">
+    <div class="card-header" style="background-color: #fee2e2; margin: -1.5rem; margin-bottom: 1.5rem; padding: 1rem 1.5rem; border-radius: 0.75rem 0.75rem 0 0;">
+        <h2 class="card-title" style="color: #991b1b;">⚠️ Expired Items</h2>
+    </div>
+    <div id="expired-items-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<!-- Expiring Soon Items -->
+<div class="card">
+    <div class="card-header" style="background-color: #fef3c7; margin: -1.5rem; margin-bottom: 1.5rem; padding: 1rem 1.5rem; border-radius: 0.75rem 0.75rem 0 0;">
+        <h2 class="card-title" style="color: #92400e;">⏰ Expiring Soon</h2>
+    </div>
+    <div id="expiring-items-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<!-- All Items with Expiry Dates -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📅 All Items with Expiry Dates</h2>
+    </div>
+    <div id="all-expiry-items-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadAlerts() {
+        try {
+            const days = parseInt(document.getElementById('days-filter').value);
+
+            // Load expired items
+            const expired = await fetchAPI('/inventory/expired');
+
+            // Load expiring items
+            const expiring = await fetchAPI(`/inventory/expiring?days=${days}`);
+
+            // Load all items
+            const allItems = await fetchAPI('/inventory/items?limit=1000');
+
+            // Calculate stats
+            const expiring3 = allItems.filter(item => {
+                if (!item.days_until_expiry) return false;
+                return item.days_until_expiry >= 0 && item.days_until_expiry <= 3;
+            });
+
+            const expiring7 = allItems.filter(item => {
+                if (!item.days_until_expiry) return false;
+                return item.days_until_expiry >= 0 && item.days_until_expiry <= 7;
+            });
+
+            const fresh = allItems.filter(item => item.expiry_status === 'fresh');
+
+            // Update stats
+            document.getElementById('stat-expired').textContent = expired.length;
+            document.getElementById('stat-expiring-3').textContent = expiring3.length;
+            document.getElementById('stat-expiring-7').textContent = expiring7.length;
+            document.getElementById('stat-fresh').textContent = fresh.length;
+
+            // Display items
+            displayExpiredItems(expired);
+            displayExpiringItems(expiring);
+            displayAllExpiryItems(allItems.filter(item => item.expiry_date));
+
+        } catch (error) {
+            console.error('Error loading alerts:', error);
+            showMessage('Error loading alerts', 'error');
+        }
+    }
+
+    function displayExpiredItems(items) {
+        const container = document.getElementById('expired-items-container');
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+                    <div style="font-weight: 500;">No expired items!</div>
+                    <p style="font-size: 0.875rem;">All items are still good.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const table = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Expired Date</th>
+                            <th>Days Ago</th>
+                            <th>Location</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr style="background-color: #fef2f2;">
+                                <td style="font-weight: 600; color: #991b1b;">⚠️ ${item.name}</td>
+                                <td>${item.category}</td>
+                                <td>${item.quantity} ${item.unit}</td>
+                                <td>${formatDate(item.expiry_date)}</td>
+                                <td style="color: #991b1b; font-weight: 600;">${Math.abs(item.days_until_expiry)} days ago</td>
+                                <td style="font-size: 0.875rem;">Location ID: ${item.location_id}</td>
+                                <td>
+                                    <button onclick="deleteExpiredItem(${item.id})" class="btn btn-danger btn-sm">Remove</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = table;
+    }
+
+    function displayExpiringItems(items) {
+        const container = document.getElementById('expiring-items-container');
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">😌</div>
+                    <div style="font-weight: 500;">No items expiring soon</div>
+                    <p style="font-size: 0.875rem;">Check back later or adjust the filter.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by days until expiry
+        items.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
+
+        const table = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Expiry Date</th>
+                            <th>Days Left</th>
+                            <th>Location</th>
+                            <th>Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => {
+                            let urgency = 'low';
+                            let urgencyColor = '#fbbf24';
+                            let urgencyLabel = 'Low';
+
+                            if (item.days_until_expiry <= 1) {
+                                urgency = 'critical';
+                                urgencyColor = '#ef4444';
+                                urgencyLabel = 'Critical';
+                            } else if (item.days_until_expiry <= 3) {
+                                urgency = 'high';
+                                urgencyColor = '#f59e0b';
+                                urgencyLabel = 'High';
+                            } else if (item.days_until_expiry <= 7) {
+                                urgency = 'medium';
+                                urgencyColor = '#fbbf24';
+                                urgencyLabel = 'Medium';
+                            }
+
+                            return `
+                                <tr style="background-color: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fffbeb' : 'transparent'};">
+                                    <td style="font-weight: 600;">${urgency === 'critical' ? '🚨 ' : ''}${item.name}</td>
+                                    <td>${item.category}</td>
+                                    <td>${item.quantity} ${item.unit}</td>
+                                    <td>${formatDate(item.expiry_date)}</td>
+                                    <td style="color: ${urgencyColor}; font-weight: 600;">
+                                        ${item.days_until_expiry} day${item.days_until_expiry === 1 ? '' : 's'}
+                                    </td>
+                                    <td style="font-size: 0.875rem;">Location ID: ${item.location_id}</td>
+                                    <td>
+                                        <span class="badge" style="background-color: ${urgencyColor}; color: white;">
+                                            ${urgencyLabel}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = table;
+    }
+
+    function displayAllExpiryItems(items) {
+        const container = document.getElementById('all-expiry-items-container');
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <p>No items with expiry dates found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by expiry date
+        items.sort((a, b) => {
+            if (!a.expiry_date) return 1;
+            if (!b.expiry_date) return -1;
+            return new Date(a.expiry_date) - new Date(b.expiry_date);
+        });
+
+        const table = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                            <th>Days Left</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td style="font-weight: 600;">${item.name}</td>
+                                <td>${item.category}</td>
+                                <td>${item.quantity} ${item.unit}</td>
+                                <td>${formatDate(item.expiry_date)}</td>
+                                <td>
+                                    <span class="badge ${getExpiryBadge(item.expiry_status)}">
+                                        ${getExpiryLabel(item.expiry_status)}
+                                    </span>
+                                </td>
+                                <td style="font-size: 0.875rem; color: var(--text-secondary);">
+                                    ${item.days_until_expiry !== null ?
+                                        (item.days_until_expiry < 0 ?
+                                            `${Math.abs(item.days_until_expiry)} days ago` :
+                                            `${item.days_until_expiry} days`) :
+                                        'N/A'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = table;
+    }
+
+    async function deleteExpiredItem(itemId) {
+        if (!confirm('Remove this expired item from inventory?')) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/inventory/items/${itemId}`, {
+                method: 'DELETE'
+            });
+
+            showMessage('Item removed successfully', 'success');
+            loadAlerts();
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            showMessage('Error deleting item', 'error');
+        }
+    }
+
+    // Load alerts on page load
+    document.addEventListener('DOMContentLoaded', loadAlerts);
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Import Data - PantryPilot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Import Data</h1>
+
+<!-- Import Instructions -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Import from TSV/CSV File</h2>
+    </div>
+    <div class="alert alert-info">
+        <strong>📋 File Format Requirements:</strong>
+        <p style="margin-top: 0.5rem;">Your file should have the following columns (tab-separated for TSV, comma-separated for CSV):</p>
+        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li><strong>name</strong> - Item name (required)</li>
+            <li><strong>category</strong> - Category (e.g., Food, Tools, Cleaning)</li>
+            <li><strong>quantity</strong> - Quantity amount</li>
+            <li><strong>unit</strong> - Unit of measurement (count, kg, g, liter, ml, etc.)</li>
+            <li><strong>location_path</strong> - Hierarchical path (e.g., "Kitchen > Fridge > Top Shelf")</li>
+            <li><strong>acquired_date</strong> - Date acquired (YYYY-MM-DD format)</li>
+            <li><strong>expiry_date</strong> - Expiration date (YYYY-MM-DD format)</li>
+            <li><strong>notes</strong> - Additional notes</li>
+        </ul>
+    </div>
+
+    <!-- File Upload -->
+    <div style="margin-top: 1.5rem;">
+        <div class="form-group">
+            <label class="form-label">Select File</label>
+            <input type="file" id="file-input" class="form-input" accept=".tsv,.csv,.txt">
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button onclick="uploadFile()" class="btn btn-primary">📤 Upload and Import</button>
+            <button onclick="importSampleFile()" class="btn btn-success">📦 Import Sample Data</button>
+        </div>
+    </div>
+
+    <!-- Import Results -->
+    <div id="import-results" style="margin-top: 1.5rem; display: none;">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Import Results</h3>
+        <div id="results-content"></div>
+    </div>
+</div>
+
+<!-- Sample File Download -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Sample Data File</h2>
+    </div>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        A sample TSV file is included in the <code>src/sample_asset_data.tsv</code> directory.
+        You can use this as a template for your own data or import it directly.
+    </p>
+    <button onclick="importSampleFile()" class="btn btn-primary">
+        📥 Import Sample Data Now
+    </button>
+</div>
+
+<!-- Import History (Future Feature) -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Quick Tips</h2>
+    </div>
+    <ul style="margin-left: 1.5rem; color: var(--text-secondary);">
+        <li>Use hierarchical paths with " > " separator (e.g., "Kitchen > Fridge > Door")</li>
+        <li>Dates should be in YYYY-MM-DD format (e.g., 2025-01-15)</li>
+        <li>Leave expiry_date empty for non-perishable items</li>
+        <li>The system will automatically create locations if they don't exist</li>
+        <li>Duplicate items will be created as separate entries (merging coming soon)</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function uploadFile() {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showMessage('Please select a file to upload', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/import/tsv?household_id=1', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            displayImportResults(result);
+
+            if (result.imported_count > 0) {
+                showMessage(`Successfully imported ${result.imported_count} items!`, 'success');
+            }
+
+            // Clear file input
+            fileInput.value = '';
+
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            showMessage('Error uploading file', 'error');
+        }
+    }
+
+    async function importSampleFile() {
+        // Get the absolute path to the sample file
+        const samplePath = 'C:\\Users\\Shenghui Xu\\Desktop\\Gen_AI_Proj\\homestead_asset_management_system\\src\\sample_asset_data.tsv';
+
+        try {
+            const result = await fetchAPI('/import/tsv/file-path', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: samplePath, household_id: 1 })
+            });
+
+            displayImportResults(result);
+
+            if (result.imported_count > 0) {
+                showMessage(`Successfully imported ${result.imported_count} sample items!`, 'success');
+            }
+
+        } catch (error) {
+            console.error('Error importing sample file:', error);
+            showMessage('Error importing sample file. Make sure the file exists at src/sample_asset_data.tsv', 'error');
+        }
+    }
+
+    function displayImportResults(result) {
+        const container = document.getElementById('import-results');
+        const content = document.getElementById('results-content');
+
+        container.style.display = 'block';
+
+        let html = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div class="card" style="background: linear-gradient(135deg, var(--success-color), #059669); color: white; padding: 1rem;">
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Imported</div>
+                    <div style="font-size: 2rem; font-weight: 700;">${result.imported_count}</div>
+                </div>
+                <div class="card" style="background: linear-gradient(135deg, var(--danger-color), #dc2626); color: white; padding: 1rem;">
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Errors</div>
+                    <div style="font-size: 2rem; font-weight: 700;">${result.error_count}</div>
+                </div>
+            </div>
+        `;
+
+        if (result.errors && result.errors.length > 0) {
+            html += `
+                <div class="alert alert-error">
+                    <strong>Errors during import:</strong>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                        ${result.errors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        html += `
+            <div style="margin-top: 1rem;">
+                <a href="/inventory" class="btn btn-primary">View Imported Items</a>
+            </div>
+        `;
+
+        content.innerHTML = html;
+    }
+
+    // Allow drag and drop
+    const fileInput = document.getElementById('file-input');
+    const container = fileInput.parentElement;
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        container.style.backgroundColor = 'var(--light-bg)';
+    });
+
+    container.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        container.style.backgroundColor = '';
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        container.style.backgroundColor = '';
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+        }
+    });
+</script>
+{% endblock %}
