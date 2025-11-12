@@ -32,6 +32,13 @@
             <input type="file" id="file-input" class="form-input" accept=".tsv,.csv,.txt">
         </div>
 
+        <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="force-reimport">
+                <span>Force re-import (ignore duplicate warning)</span>
+            </label>
+        </div>
+
         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
             <button onclick="uploadFile()" class="btn btn-primary">📤 Upload and Import</button>
             <button onclick="importSampleFile()" class="btn btn-success">📦 Import Sample Data</button>
@@ -59,7 +66,17 @@
     </button>
 </div>
 
-<!-- Import History (Future Feature) -->
+<!-- Import History -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Import History</h2>
+    </div>
+    <div id="import-history-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<!-- Quick Tips -->
 <div class="card">
     <div class="card-header">
         <h2 class="card-title">Quick Tips</h2>
@@ -117,12 +134,35 @@
     async function importSampleFile() {
         // Use relative path from server's working directory
         const samplePath = 'src/sample_asset_data.tsv';
+        const forceReimport = document.getElementById('force-reimport').checked;
 
         try {
+            // Check if file was previously imported (unless force is checked)
+            if (!forceReimport) {
+                const checkResponse = await fetch(`/api/import/check?file_path=${encodeURIComponent(samplePath)}&household_id=1`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.previously_imported) {
+                    const importDate = new Date(checkResult.last_import_date).toLocaleString();
+                    const message = `This file was previously imported on ${importDate}.\n` +
+                                  `Imported: ${checkResult.imported_count} items\n` +
+                                  `Errors: ${checkResult.error_count}\n\n` +
+                                  `Do you want to import it again?`;
+
+                    if (!confirm(message)) {
+                        return;
+                    }
+                }
+            }
+
             const response = await fetch('/api/import/tsv/file-path', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_path: samplePath, household_id: 1 })
+                body: JSON.stringify({
+                    file_path: samplePath,
+                    household_id: 1,
+                    force: forceReimport
+                })
             });
 
             if (!response.ok) {
@@ -136,6 +176,9 @@
             if (result.imported_count > 0) {
                 showMessage(`Successfully imported ${result.imported_count} sample items!`, 'success');
             }
+
+            // Reload import history
+            loadImportHistory();
 
         } catch (error) {
             console.error('Error importing sample file:', error);
@@ -181,6 +224,66 @@
 
         content.innerHTML = html;
     }
+
+    async function loadImportHistory() {
+        try {
+            const history = await fetchAPI('/api/import/history?household_id=1');
+            displayImportHistory(history);
+        } catch (error) {
+            console.error('Error loading import history:', error);
+            const container = document.getElementById('import-history-container');
+            container.innerHTML = '<p style="color: var(--text-secondary);">Error loading import history</p>';
+        }
+    }
+
+    function displayImportHistory(history) {
+        const container = document.getElementById('import-history-container');
+
+        if (!history || history.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary);">No import history yet</p>';
+            return;
+        }
+
+        const table = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>File</th>
+                            <th>Imported</th>
+                            <th>Errors</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(record => `
+                            <tr>
+                                <td style="font-size: 0.875rem;">${formatDate(record.created_at)}</td>
+                                <td style="font-weight: 500;">${record.file_name}</td>
+                                <td>
+                                    <span class="badge badge-success">${record.imported_count}</span>
+                                </td>
+                                <td>
+                                    ${record.error_count > 0
+                                        ? `<span class="badge badge-danger">${record.error_count}</span>`
+                                        : `<span class="badge badge-secondary">0</span>`
+                                    }
+                                </td>
+                                <td style="font-size: 0.875rem; color: var(--text-secondary);">
+                                    ${record.notes || '-'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = table;
+    }
+
+    // Load import history on page load
+    document.addEventListener('DOMContentLoaded', loadImportHistory);
 
     // Allow drag and drop
     const fileInput = document.getElementById('file-input');

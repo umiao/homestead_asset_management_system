@@ -21,6 +21,7 @@
         </select>
         <button onclick="searchItems()" class="btn btn-primary">Search</button>
         <button onclick="showAddModal()" class="btn btn-success">➕ Add Item</button>
+        <button onclick="deleteSelected()" class="btn btn-danger" id="delete-selected-btn" style="display: none;">🗑️ Delete Selected (<span id="selected-count">0</span>)</button>
     </div>
 </div>
 
@@ -266,6 +267,9 @@
                 <table class="table">
                     <thead>
                         <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                            </th>
                             <th>Name</th>
                             <th>Category</th>
                             <th>Quantity</th>
@@ -281,6 +285,9 @@
                             const location = allLocations.find(loc => loc.id === item.location_id);
                             return `
                                 <tr>
+                                    <td>
+                                        <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="updateSelectedCount()">
+                                    </td>
                                     <td style="font-weight: 600;">${item.name}</td>
                                     <td>${item.category}</td>
                                     <td>${item.quantity} ${item.unit}</td>
@@ -303,6 +310,7 @@
             </div>
         `;
         container.innerHTML = table;
+        updateSelectedCount();
     }
 
     function showAddModal() {
@@ -348,7 +356,89 @@
         }
     }
 
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        const count = checkboxes.length;
+        document.getElementById('selected-count').textContent = count;
+
+        const deleteBtn = document.getElementById('delete-selected-btn');
+        if (count > 0) {
+            deleteBtn.style.display = 'inline-flex';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+
+        // Update select-all checkbox state
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        const selectAllCheckbox = document.getElementById('select-all');
+        if (selectAllCheckbox && allCheckboxes.length > 0) {
+            selectAllCheckbox.checked = count === allCheckboxes.length;
+        }
+    }
+
+    async function deleteSelected() {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        const itemIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+        if (itemIds.length === 0) {
+            showMessage('No items selected', 'error');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${itemIds.length} item(s)?`)) {
+            return;
+        }
+
+        try {
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of itemIds) {
+                try {
+                    await fetchAPI(`/inventory/items/${itemId}`, {
+                        method: 'DELETE'
+                    });
+                    successCount++;
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showMessage(`Successfully deleted ${successCount} item(s)`, 'success');
+            }
+            if (errorCount > 0) {
+                showMessage(`Failed to delete ${errorCount} item(s)`, 'error');
+            }
+
+            await loadInventory();
+
+            // Reset checkboxes and button state after reload
+            setTimeout(() => {
+                const selectAll = document.getElementById('select-all');
+                if (selectAll) selectAll.checked = false;
+
+                const checkboxes = document.querySelectorAll('.item-checkbox');
+                checkboxes.forEach(cb => cb.checked = false);
+
+                updateSelectedCount();  // This will hide the Delete Selected button
+            }, 100);
+        } catch (error) {
+            console.error('Error deleting items:', error);
+            showMessage('Error deleting items', 'error');
+        }
+    }
+
     async function deleteItem(itemId) {
+        if (!confirm('Are you sure you want to delete this item?')) {
+            return;
+        }
 
         try {
             await fetchAPI(`/inventory/items/${itemId}`, {
@@ -364,7 +454,17 @@
     }
 
     // Load inventory on page load
-    document.addEventListener('DOMContentLoaded', loadInventory);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadInventory();
+
+        // Add Enter key support for search
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchItems();
+            }
+        });
+    });
 
     // Close modal on escape key
     document.addEventListener('keydown', (e) => {

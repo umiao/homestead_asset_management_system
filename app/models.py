@@ -108,3 +108,15 @@ class Event(SQLModel, table=True):
     new_location_id: Optional[int] = None
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ImportHistory(SQLModel, table=True):
+    """Track import history to prevent duplicates."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    file_path: str = Field(index=True)
+    file_name: str
+    imported_count: int = Field(default=0)
+    error_count: int = Field(default=0)
+    household_id: int = Field(foreign_key="household.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    notes: Optional[str] = None

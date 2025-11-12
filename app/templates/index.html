@@ -82,7 +82,7 @@
             document.getElementById('stat-locations').textContent = locations.length;
 
             // Display recent items (last 10)
-            displayRecentItems(items.slice(0, 10));
+            displayRecentItems(items.slice(0, 10), locations);
 
             // Display category breakdown
             displayCategoryBreakdown(items);
@@ -93,7 +93,7 @@
         }
     }
 
-    function displayRecentItems(items) {
+    function displayRecentItems(items, locations) {
         const container = document.getElementById('recent-items-container');
 
         if (items.length === 0) {
@@ -120,21 +120,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${items.map(item => `
-                            <tr>
-                                <td style="font-weight: 600;">${item.name}</td>
-                                <td>${item.category}</td>
-                                <td>${item.quantity} ${item.unit}</td>
-                                <td>
-                                    <span class="badge ${getExpiryBadge(item.expiry_status)}">
-                                        ${getExpiryLabel(item.expiry_status)}
-                                    </span>
-                                </td>
-                                <td style="font-size: 0.875rem; color: var(--text-secondary);">
-                                    ${item.location ? 'Location ID: ' + item.location_id : 'No location'}
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ${items.map(item => {
+                            const location = locations.find(loc => loc.id === item.location_id);
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600;">${item.name}</td>
+                                    <td>${item.category}</td>
+                                    <td>${item.quantity} ${item.unit}</td>
+                                    <td>
+                                        <span class="badge ${getExpiryBadge(item.expiry_status)}">
+                                            ${getExpiryLabel(item.expiry_status)}
+                                        </span>
+                                    </td>
+                                    <td style="font-size: 0.875rem; color: var(--text-secondary);">
+                                        ${location ? location.full_path : 'Unknown'}
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>

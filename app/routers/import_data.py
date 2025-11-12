@@ -1,14 +1,15 @@
 """Data import endpoints for TSV/CSV files."""
 import csv
 from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Body
-from sqlmodel import Session
+from pathlib import Path
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Body, Query
+from sqlmodel import Session, select
 from datetime import datetime, date
 from io import StringIO
 from pydantic import BaseModel
 
 from ..database import get_session
-from ..models import Item
+from ..models import Item, ImportHistory
 from .. import crud
 
 router = APIRouter(prefix="/api/import", tags=["import"])
@@ -18,6 +19,7 @@ class ImportFileRequest(BaseModel):
     """Request model for file path import."""
     file_path: str
     household_id: int = 1
+    force: bool = False  # Force import even if already imported
 
 
 def parse_quantity(quantity_str: str) -> float:
@@ -221,6 +223,18 @@ def import_tsv_from_path(
                 except Exception as e:
                     errors.append(f"Row {row_num}: {str(e)}")
 
+        # Record import history
+        import_record = ImportHistory(
+            file_path=file_path,
+            file_name=Path(file_path).name,
+            imported_count=len(imported_items),
+            error_count=len(errors),
+            household_id=household.id,
+            notes=f"Imported {len(imported_items)} items, {len(errors)} errors"
+        )
+        session.add(import_record)
+        session.commit()
+
         return {
             "message": f"Import completed",
             "imported_count": len(imported_items),
@@ -233,3 +247,41 @@ def import_tsv_from_path(
         raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history")
+def get_import_history(
+    household_id: int = Query(default=1),
+    session: Session = Depends(get_session)
+):
+    """Get import history."""
+    statement = select(ImportHistory).where(
+        ImportHistory.household_id == household_id
+    ).order_by(ImportHistory.created_at.desc())
+    history = list(session.exec(statement).all())
+    return history
+
+
+@router.get("/check")
+def check_import_status(
+    file_path: str,
+    household_id: int = Query(default=1),
+    session: Session = Depends(get_session)
+):
+    """Check if file has been imported before."""
+    statement = select(ImportHistory).where(
+        ImportHistory.file_path == file_path,
+        ImportHistory.household_id == household_id
+    ).order_by(ImportHistory.created_at.desc()).limit(1)
+
+    last_import = session.exec(statement).first()
+
+    if last_import:
+        return {
+            "previously_imported": True,
+            "last_import_date": last_import.created_at,
+            "imported_count": last_import.imported_count,
+            "error_count": last_import.error_count
+        }
+    else:
+        return {"previously_imported": False}
