@@ -170,6 +170,7 @@
     let allLocations = [];
     let selectedLocationId = null;
     let itemsToDelete = []; // Track items pending deletion
+    let editingItemId = null; // Track item being edited
 
     async function loadInventory() {
         try {
@@ -328,12 +329,19 @@
                     <tbody>
                         ${items.map(item => {
                             const location = allLocations.find(loc => loc.id === item.location_id);
+                            const hasNotes = item.notes && item.notes.trim().length > 0;
+                            const notesTitle = hasNotes ? item.notes.replace(/"/g, '&quot;') : '';
+                            const nameStyle = hasNotes
+                                ? 'font-weight: 600; cursor: help; text-decoration: underline dotted; text-decoration-color: var(--border-color);'
+                                : 'font-weight: 600;';
                             return `
                                 <tr>
                                     <td>
                                         <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="updateSelectedCount()">
                                     </td>
-                                    <td style="font-weight: 600;">${item.name}</td>
+                                    <td style="${nameStyle}" ${hasNotes ? `title="${notesTitle}"` : ''}>
+                                        ${item.name}
+                                    </td>
                                     <td>${item.category}</td>
                                     <td>${item.quantity} ${item.unit}</td>
                                     <td style="font-size: 0.875rem;">${location ? location.full_path : 'Unknown'}</td>
@@ -345,6 +353,7 @@
                                         </span>
                                     </td>
                                     <td>
+                                        <button onclick="editItem(${item.id})" class="btn btn-primary btn-sm" style="margin-right: 0.5rem;">Edit</button>
                                         <button onclick="deleteItem(${item.id})" class="btn btn-danger btn-sm">Delete</button>
                                     </td>
                                 </tr>
@@ -359,6 +368,7 @@
     }
 
     function showAddModal() {
+        editingItemId = null;
         document.getElementById('item-modal').style.display = 'flex';
         document.getElementById('modal-title').textContent = 'Add New Item';
         document.getElementById('item-form').reset();
@@ -367,8 +377,34 @@
         document.getElementById('item-acquired').valueAsDate = new Date();
     }
 
+    function editItem(itemId) {
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) {
+            showMessage('Item not found', 'error');
+            return;
+        }
+
+        editingItemId = itemId;
+        document.getElementById('item-modal').style.display = 'flex';
+        document.getElementById('modal-title').textContent = 'Edit Item';
+
+        // Populate form with existing data
+        document.getElementById('item-name').value = item.name;
+        document.getElementById('item-category').value = item.category;
+        document.getElementById('item-quantity').value = item.quantity;
+        document.getElementById('item-unit').value = item.unit;
+
+        const location = allLocations.find(loc => loc.id === item.location_id);
+        document.getElementById('item-location').value = location ? location.full_path : '';
+
+        document.getElementById('item-acquired').value = item.acquired_date || '';
+        document.getElementById('item-expiry').value = item.expiry_date || '';
+        document.getElementById('item-notes').value = item.notes || '';
+    }
+
     function closeModal() {
         document.getElementById('item-modal').style.display = 'none';
+        editingItemId = null;
     }
 
     async function saveItem(event) {
@@ -386,18 +422,29 @@
         };
 
         try {
-            await fetchAPI('/inventory/items', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
+            if (editingItemId) {
+                // Update existing item
+                await fetchAPI(`/inventory/items/${editingItemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                showMessage('Item updated successfully', 'success');
+            } else {
+                // Create new item
+                await fetchAPI('/inventory/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                showMessage('Item added successfully', 'success');
+            }
 
-            showMessage('Item added successfully', 'success');
             closeModal();
             loadInventory();
         } catch (error) {
             console.error('Error saving item:', error);
-            showMessage('Error saving item', 'error');
+            showMessage(`Error ${editingItemId ? 'updating' : 'saving'} item`, 'error');
         }
     }
 

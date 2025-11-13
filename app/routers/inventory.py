@@ -147,6 +147,15 @@ def update_item(
     session: Session = Depends(get_session)
 ):
     """Update item."""
+    # Handle location_path if provided
+    if "location_path" in updates:
+        location_path = updates.pop("location_path")
+        household = crud.get_or_create_household(session)
+        location = crud.get_or_create_location_by_path(
+            session, location_path, household.id
+        )
+        updates["location_id"] = location.id
+
     item = crud.update_item(session, item_id, updates)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")

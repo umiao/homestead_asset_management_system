@@ -1,5 +1,7 @@
 # Ignore any file ending with .db
 *.db
+*.tsv
+*.log
 
 # Also ignore files that literally end with 'db' (no dot before)
 *db
