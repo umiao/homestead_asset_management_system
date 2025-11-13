@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from datetime import datetime, date
 from io import StringIO
 from pydantic import BaseModel
+import hashlib
 
 from ..database import get_session
 from ..models import Item, ImportHistory
@@ -20,6 +21,20 @@ class ImportFileRequest(BaseModel):
     file_path: str
     household_id: int = 1
     force: bool = False  # Force import even if already imported
+
+
+def calculate_file_hash(file_path: str) -> str:
+    """Calculate SHA256 hash of file content."""
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            # Read file in chunks to handle large files
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+    except Exception as e:
+        # If we can't read the file, return empty hash
+        return ""
 
 
 def parse_quantity(quantity_str: str) -> float:
@@ -87,6 +102,7 @@ def parse_date(date_str: str) -> date:
 @router.post("/tsv")
 async def import_tsv(
     file: UploadFile = File(...),
+    file_hash: str = None,
     household_id: int = 1,
     session: Session = Depends(get_session)
 ):
@@ -100,6 +116,10 @@ async def import_tsv(
     # Read file content
     content = await file.read()
     content_str = content.decode('utf-8')
+
+    # Calculate hash if not provided
+    if not file_hash:
+        file_hash = hashlib.sha256(content).hexdigest()
 
     # Determine delimiter
     delimiter = '\t' if file.filename.endswith('.tsv') else ','
@@ -153,6 +173,19 @@ async def import_tsv(
         except Exception as e:
             errors.append(f"Row {row_num}: {str(e)}")
 
+    # Record import history
+    import_record = ImportHistory(
+        file_path=file.filename,
+        file_name=file.filename,
+        file_hash=file_hash,
+        imported_count=len(imported_items),
+        error_count=len(errors),
+        household_id=household.id,
+        notes=f"Uploaded file: {file.filename}, Imported {len(imported_items)} items, {len(errors)} errors"
+    )
+    session.add(import_record)
+    session.commit()
+
     return {
         "message": f"Import completed",
         "imported_count": len(imported_items),
@@ -171,6 +204,9 @@ def import_tsv_from_path(
     file_path = request.file_path
     household_id = request.household_id
     try:
+        # Calculate file hash for duplicate detection
+        file_hash = calculate_file_hash(file_path)
+
         # Determine delimiter
         delimiter = '\t' if file_path.endswith('.tsv') else ','
 
@@ -227,6 +263,7 @@ def import_tsv_from_path(
         import_record = ImportHistory(
             file_path=file_path,
             file_name=Path(file_path).name,
+            file_hash=file_hash,
             imported_count=len(imported_items),
             error_count=len(errors),
             household_id=household.id,
@@ -268,9 +305,46 @@ def check_import_status(
     household_id: int = Query(default=1),
     session: Session = Depends(get_session)
 ):
-    """Check if file has been imported before."""
+    """Check if file has been imported before using file hash."""
+    # Calculate hash of the file
+    file_hash = calculate_file_hash(file_path)
+
+    if not file_hash:
+        # If we can't calculate hash, fall back to path check
+        statement = select(ImportHistory).where(
+            ImportHistory.file_path == file_path,
+            ImportHistory.household_id == household_id
+        ).order_by(ImportHistory.created_at.desc()).limit(1)
+    else:
+        # Check by hash (more reliable)
+        statement = select(ImportHistory).where(
+            ImportHistory.file_hash == file_hash,
+            ImportHistory.household_id == household_id
+        ).order_by(ImportHistory.created_at.desc()).limit(1)
+
+    last_import = session.exec(statement).first()
+
+    if last_import:
+        return {
+            "previously_imported": True,
+            "last_import_date": last_import.created_at,
+            "imported_count": last_import.imported_count,
+            "error_count": last_import.error_count,
+            "file_name": last_import.file_name
+        }
+    else:
+        return {"previously_imported": False}
+
+
+@router.get("/check-hash")
+def check_import_status_by_hash(
+    file_hash: str,
+    household_id: int = Query(default=1),
+    session: Session = Depends(get_session)
+):
+    """Check if file hash has been imported before (for uploaded files)."""
     statement = select(ImportHistory).where(
-        ImportHistory.file_path == file_path,
+        ImportHistory.file_hash == file_hash,
         ImportHistory.household_id == household_id
     ).order_by(ImportHistory.created_at.desc()).limit(1)
 
@@ -281,7 +355,8 @@ def check_import_status(
             "previously_imported": True,
             "last_import_date": last_import.created_at,
             "imported_count": last_import.imported_count,
-            "error_count": last_import.error_count
+            "error_count": last_import.error_count,
+            "file_name": last_import.file_name
         }
     else:
         return {"previously_imported": False}

@@ -72,9 +72,14 @@
 
 {% block extra_js %}
 <script>
+    let allLocations = [];
+
     async function loadAlerts() {
         try {
             const days = parseInt(document.getElementById('days-filter').value);
+
+            // Load locations first
+            allLocations = await fetchAPI('/inventory/locations');
 
             // Load expired items
             const expired = await fetchAPI('/inventory/expired');
@@ -144,19 +149,22 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${items.map(item => `
+                        ${items.map(item => {
+                            const location = allLocations.find(loc => loc.id === item.location_id);
+                            return `
                             <tr style="background-color: #fef2f2;">
                                 <td style="font-weight: 600; color: #991b1b;">⚠️ ${item.name}</td>
                                 <td>${item.category}</td>
                                 <td>${item.quantity} ${item.unit}</td>
                                 <td>${formatDate(item.expiry_date)}</td>
-                                <td style="color: #991b1b; font-weight: 600;">${Math.abs(item.days_until_expiry)} days ago</td>
-                                <td style="font-size: 0.875rem;">Location ID: ${item.location_id}</td>
+                                <td style="color: #991b1b; font-weight: 600;">${item.days_until_expiry !== null ? Math.abs(item.days_until_expiry) : 'N/A'} days ago</td>
+                                <td style="font-size: 0.875rem;">${location ? location.full_path : 'Unknown'}</td>
                                 <td>
                                     <button onclick="deleteExpiredItem(${item.id})" class="btn btn-danger btn-sm">Remove</button>
                                 </td>
                             </tr>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -201,19 +209,23 @@
                             let urgencyColor = '#fbbf24';
                             let urgencyLabel = 'Low';
 
-                            if (item.days_until_expiry <= 1) {
-                                urgency = 'critical';
-                                urgencyColor = '#ef4444';
-                                urgencyLabel = 'Critical';
-                            } else if (item.days_until_expiry <= 3) {
-                                urgency = 'high';
-                                urgencyColor = '#f59e0b';
-                                urgencyLabel = 'High';
-                            } else if (item.days_until_expiry <= 7) {
-                                urgency = 'medium';
-                                urgencyColor = '#fbbf24';
-                                urgencyLabel = 'Medium';
+                            if (item.days_until_expiry !== null) {
+                                if (item.days_until_expiry <= 1) {
+                                    urgency = 'critical';
+                                    urgencyColor = '#ef4444';
+                                    urgencyLabel = 'Critical';
+                                } else if (item.days_until_expiry <= 3) {
+                                    urgency = 'high';
+                                    urgencyColor = '#f59e0b';
+                                    urgencyLabel = 'High';
+                                } else if (item.days_until_expiry <= 7) {
+                                    urgency = 'medium';
+                                    urgencyColor = '#fbbf24';
+                                    urgencyLabel = 'Medium';
+                                }
                             }
+
+                            const location = allLocations.find(loc => loc.id === item.location_id);
 
                             return `
                                 <tr style="background-color: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fffbeb' : 'transparent'};">
@@ -222,9 +234,9 @@
                                     <td>${item.quantity} ${item.unit}</td>
                                     <td>${formatDate(item.expiry_date)}</td>
                                     <td style="color: ${urgencyColor}; font-weight: 600;">
-                                        ${item.days_until_expiry} day${item.days_until_expiry === 1 ? '' : 's'}
+                                        ${item.days_until_expiry !== null ? item.days_until_expiry : 'N/A'} day${item.days_until_expiry === 1 ? '' : 's'}
                                     </td>
-                                    <td style="font-size: 0.875rem;">Location ID: ${item.location_id}</td>
+                                    <td style="font-size: 0.875rem;">${location ? location.full_path : 'Unknown'}</td>
                                     <td>
                                         <span class="badge" style="background-color: ${urgencyColor}; color: white;">
                                             ${urgencyLabel}
@@ -301,20 +313,25 @@
     }
 
     async function deleteExpiredItem(itemId) {
-        if (!confirm('Remove this expired item from inventory?')) {
+        if (!confirm('确认移除此过期物品？ / Remove this expired item from inventory?')) {
             return;
         }
 
         try {
             await fetchAPI(`/inventory/items/${itemId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reason: '过期丢弃 / Expired',
+                    checkout_record: '从过期警报页面移除 / Removed from expiration alerts page'
+                })
             });
 
-            showMessage('Item removed successfully', 'success');
+            showMessage('过期物品已移除 / Expired item removed successfully', 'success');
             loadAlerts();
         } catch (error) {
             console.error('Error deleting item:', error);
-            showMessage('Error deleting item', 'error');
+            showMessage('删除失败 / Error deleting item', 'error');
         }
     }
 

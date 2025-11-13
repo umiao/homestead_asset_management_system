@@ -93,19 +93,54 @@
 
 {% block extra_js %}
 <script>
+    async function calculateFileHash(file) {
+        // Calculate SHA-256 hash of file content
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+    }
+
     async function uploadFile() {
         const fileInput = document.getElementById('file-input');
         const file = fileInput.files[0];
+        const forceReimport = document.getElementById('force-reimport').checked;
 
         if (!file) {
             showMessage('Please select a file to upload', 'error');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
+            // Calculate file hash for duplicate detection
+            const fileHash = await calculateFileHash(file);
+
+            // Check if file was previously imported (unless force is checked)
+            if (!forceReimport) {
+                const checkResponse = await fetch(`/api/import/check-hash?file_hash=${fileHash}&household_id=1`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.previously_imported) {
+                    const importDate = new Date(checkResult.last_import_date).toLocaleString();
+                    const message = `⚠️ 重复导入检测 / Duplicate Import Detected\n\n` +
+                                  `文件名 / File: ${checkResult.file_name}\n` +
+                                  `上次导入时间 / Last imported: ${importDate}\n` +
+                                  `导入数量 / Imported: ${checkResult.imported_count} items\n` +
+                                  `错误数 / Errors: ${checkResult.error_count}\n\n` +
+                                  `是否继续重复导入？\n` +
+                                  `Do you want to import it again?`;
+
+                    if (!confirm(message)) {
+                        return;
+                    }
+                }
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('file_hash', fileHash);
+
             const response = await fetch('/api/import/tsv?household_id=1', {
                 method: 'POST',
                 body: formData
@@ -119,15 +154,18 @@
             displayImportResults(result);
 
             if (result.imported_count > 0) {
-                showMessage(`Successfully imported ${result.imported_count} items!`, 'success');
+                showMessage(`成功导入 ${result.imported_count} 件物品！/ Successfully imported ${result.imported_count} items!`, 'success');
             }
 
             // Clear file input
             fileInput.value = '';
 
+            // Reload import history
+            loadImportHistory();
+
         } catch (error) {
             console.error('Error uploading file:', error);
-            showMessage('Error uploading file', 'error');
+            showMessage('上传文件时出错 / Error uploading file', 'error');
         }
     }
 
@@ -144,9 +182,12 @@
 
                 if (checkResult.previously_imported) {
                     const importDate = new Date(checkResult.last_import_date).toLocaleString();
-                    const message = `This file was previously imported on ${importDate}.\n` +
-                                  `Imported: ${checkResult.imported_count} items\n` +
-                                  `Errors: ${checkResult.error_count}\n\n` +
+                    const message = `⚠️ 重复导入检测 / Duplicate Import Detected\n\n` +
+                                  `文件名 / File: ${checkResult.file_name || samplePath}\n` +
+                                  `上次导入时间 / Last imported: ${importDate}\n` +
+                                  `导入数量 / Imported: ${checkResult.imported_count} items\n` +
+                                  `错误数 / Errors: ${checkResult.error_count}\n\n` +
+                                  `是否继续重复导入？\n` +
                                   `Do you want to import it again?`;
 
                     if (!confirm(message)) {
@@ -227,7 +268,7 @@
 
     async function loadImportHistory() {
         try {
-            const history = await fetchAPI('/api/import/history?household_id=1');
+            const history = await fetchAPI('/import/history?household_id=1');
             displayImportHistory(history);
         } catch (error) {
             console.error('Error loading import history:', error);

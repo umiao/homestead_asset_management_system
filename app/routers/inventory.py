@@ -39,18 +39,27 @@ class DeleteItemRequest(BaseModel):
     checkout_record: Optional[str] = None
 
 
-@router.get("/items", response_model=List[Item])
+@router.get("/items")
 def list_items(
     household_id: int = Query(default=1),
     skip: int = 0,
     limit: int = 100,
     session: Session = Depends(get_session)
 ):
-    """List all inventory items."""
-    return crud.get_all_items(session, household_id, skip, limit)
+    """List all inventory items with computed fields."""
+    items = crud.get_all_items(session, household_id, skip, limit)
+    return [
+        {
+            **item.model_dump(),
+            "expiry_status": item.expiry_status,
+            "days_until_expiry": item.days_until_expiry,
+            "is_expired": item.is_expired
+        }
+        for item in items
+    ]
 
 
-@router.get("/items/search", response_model=List[Item])
+@router.get("/items/search")
 def search_items(
     household_id: int = Query(default=1),
     q: Optional[str] = None,
@@ -59,8 +68,8 @@ def search_items(
     expiry_status: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    """Search items with filters."""
-    return crud.search_items(
+    """Search items with filters and computed fields."""
+    items = crud.search_items(
         session,
         household_id,
         query=q,
@@ -68,15 +77,29 @@ def search_items(
         location_id=location_id,
         expiry_status=expiry_status
     )
+    return [
+        {
+            **item.model_dump(),
+            "expiry_status": item.expiry_status,
+            "days_until_expiry": item.days_until_expiry,
+            "is_expired": item.is_expired
+        }
+        for item in items
+    ]
 
 
-@router.get("/items/{item_id}", response_model=Item)
+@router.get("/items/{item_id}")
 def get_item(item_id: int, session: Session = Depends(get_session)):
-    """Get item by ID."""
+    """Get item by ID with computed fields."""
     item = crud.get_item(session, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item
+    return {
+        **item.model_dump(),
+        "expiry_status": item.expiry_status,
+        "days_until_expiry": item.days_until_expiry,
+        "is_expired": item.is_expired
+    }
 
 
 @router.post("/items", response_model=Item)
@@ -181,23 +204,41 @@ def delete_item(
     }
 
 
-@router.get("/expiring", response_model=List[Item])
+@router.get("/expiring")
 def get_expiring_items(
     household_id: int = Query(default=1),
     days: int = Query(default=7),
     session: Session = Depends(get_session)
 ):
-    """Get items expiring within specified days."""
-    return crud.get_expiring_items(session, household_id, days)
+    """Get items expiring within specified days with computed fields."""
+    items = crud.get_expiring_items(session, household_id, days)
+    return [
+        {
+            **item.model_dump(),
+            "expiry_status": item.expiry_status,
+            "days_until_expiry": item.days_until_expiry,
+            "is_expired": item.is_expired
+        }
+        for item in items
+    ]
 
 
-@router.get("/expired", response_model=List[Item])
+@router.get("/expired")
 def get_expired_items(
     household_id: int = Query(default=1),
     session: Session = Depends(get_session)
 ):
-    """Get expired items."""
-    return crud.get_expired_items(session, household_id)
+    """Get expired items with computed fields."""
+    items = crud.get_expired_items(session, household_id)
+    return [
+        {
+            **item.model_dump(),
+            "expiry_status": item.expiry_status,
+            "days_until_expiry": item.days_until_expiry,
+            "is_expired": item.is_expired
+        }
+        for item in items
+    ]
 
 
 @router.get("/categories")

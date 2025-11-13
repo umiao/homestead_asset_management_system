@@ -124,6 +124,7 @@ class ImportHistory(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     file_path: str = Field(index=True)
     file_name: str
+    file_hash: Optional[str] = Field(default=None, index=True)  # SHA256 hash of file content
     imported_count: int = Field(default=0)
     error_count: int = Field(default=0)
     household_id: int = Field(foreign_key="household.id")
