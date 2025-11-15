@@ -13,7 +13,9 @@
       "Bash(nul)",
       "Bash(python fix_encoding.py:*)",
       "Bash(python test_features.py:*)",
-      "Bash(python test_comma_support.py:*)"
+      "Bash(python test_comma_support.py:*)",
+      "Bash(python cleanup_test_data.py:*)",
+      "Bash(python run_staging.py:*)"
     ],
     "deny": [],
     "ask": []

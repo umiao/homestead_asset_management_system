@@ -220,21 +220,11 @@ expires_at = acquired_at + base_days - condition_adjustment
 
 ---
 
-## 13. Performance Targets (V1)
-
-| Metric            | Target                     |
-| ----------------- | -------------------------- |
-| 10k item query    | <200 ms (Postgres indexed) |
-| Photo recognition | <2 s (CPU; GPU optional)   |
-| Daily alert job   | <1 min                     |
-| Q&A response      | <3 s (cached)              |
-
----
-
-## 14. Testing & Monitoring
+## 13. Testing & Monitoring
 
 * **Unit test coverage:** >70% (core ≥85%).
 * **E2E tests:** import → detect → Q&A → alert → render.
 * **Synthetic checks:** scheduled expiry → alert simulation.
 * **Observability:** OpenTelemetry + sampled logs.
 * **Audit trails** for all data access.
+* Use separate test db rather than the production DB.

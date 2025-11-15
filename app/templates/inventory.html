@@ -70,6 +70,33 @@
         content: '↓';
         opacity: 1;
     }
+
+    /* Location tree independent scrolling */
+    #location-tree {
+        max-height: calc(100vh - 250px); /* Viewport height minus header and margins */
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 5px;
+    }
+
+    /* Custom scrollbar for location tree */
+    #location-tree::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #location-tree::-webkit-scrollbar-track {
+        background: var(--light-bg, #f1f1f1);
+        border-radius: 4px;
+    }
+
+    #location-tree::-webkit-scrollbar-thumb {
+        background: var(--border-color, #ccc);
+        border-radius: 4px;
+    }
+
+    #location-tree::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary, #999);
+    }
 </style>
 {% endblock %}
 
