@@ -104,15 +104,7 @@ def get_item(item_id: int, session: Session = Depends(get_session)):
 
 @router.post("/items", response_model=Item)
 def create_item(
-    name: str,
-    category: str,
-    quantity: float,
-    unit: str,
-    location_path: str,
-    household_id: int = 1,
-    acquired_date: Optional[date] = None,
-    expiry_date: Optional[date] = None,
-    notes: Optional[str] = None,
+    item_data: dict = Body(...),
     session: Session = Depends(get_session)
 ):
     """Create new inventory item."""
@@ -120,21 +112,38 @@ def create_item(
     household = crud.get_or_create_household(session)
 
     # Get or create location
+    location_path = item_data.get("location_path")
+    if not location_path:
+        raise HTTPException(status_code=400, detail="location_path is required")
+
     location = crud.get_or_create_location_by_path(
         session, location_path, household.id
     )
 
+    # Convert date strings to date objects
+    acquired_date = item_data.get("acquired_date")
+    if acquired_date and isinstance(acquired_date, str):
+        acquired_date = datetime.strptime(acquired_date, "%Y-%m-%d").date()
+    elif not acquired_date:
+        acquired_date = None
+
+    expiry_date = item_data.get("expiry_date")
+    if expiry_date and isinstance(expiry_date, str):
+        expiry_date = datetime.strptime(expiry_date, "%Y-%m-%d").date()
+    elif not expiry_date:
+        expiry_date = None
+
     # Create item
     item = Item(
-        name=name,
-        category=category,
-        quantity=quantity,
-        unit=unit,
+        name=item_data.get("name"),
+        category=item_data.get("category"),
+        quantity=item_data.get("quantity"),
+        unit=item_data.get("unit"),
         location_id=location.id,
         household_id=household.id,
         acquired_date=acquired_date,
         expiry_date=expiry_date,
-        notes=notes
+        notes=item_data.get("notes")
     )
 
     return crud.create_item(session, item)
@@ -155,6 +164,18 @@ def update_item(
             session, location_path, household.id
         )
         updates["location_id"] = location.id
+
+    # Convert date strings to date objects
+    if "acquired_date" in updates:
+        if updates["acquired_date"] and isinstance(updates["acquired_date"], str):
+            updates["acquired_date"] = datetime.strptime(updates["acquired_date"], "%Y-%m-%d").date()
+        elif not updates["acquired_date"]:
+            updates["acquired_date"] = None
+    if "expiry_date" in updates:
+        if updates["expiry_date"] and isinstance(updates["expiry_date"], str):
+            updates["expiry_date"] = datetime.strptime(updates["expiry_date"], "%Y-%m-%d").date()
+        elif not updates["expiry_date"]:
+            updates["expiry_date"] = None
 
     item = crud.update_item(session, item_id, updates)
     if not item:

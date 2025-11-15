@@ -127,6 +127,8 @@ def search_items(
 
 def update_item(session: Session, item_id: int, updates: dict) -> Optional[Item]:
     """Update item fields."""
+    from datetime import datetime
+
     item = session.get(Item, item_id)
     if not item:
         return None
@@ -136,6 +138,9 @@ def update_item(session: Session, item_id: int, updates: dict) -> Optional[Item]
     for key, value in updates.items():
         if hasattr(item, key):
             setattr(item, key, value)
+
+    # Update the timestamp
+    item.updated_at = datetime.utcnow()
 
     session.add(item)
     session.commit()
