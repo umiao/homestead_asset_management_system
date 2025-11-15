@@ -193,6 +193,11 @@ main {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    user-select: none;
+    cursor: default;
 }
 
 /* Buttons */
@@ -292,14 +297,23 @@ main {
     font-size: 1rem;
 }
 
+/* Recent Items Container */
+#recent-items-container {
+    user-select: none;
+    cursor: default;
+}
+
 /* Table */
 .table-container {
     overflow-x: auto;
+    user-select: none;
+    cursor: default;
 }
 
 .table {
     width: 100%;
     border-collapse: collapse;
+    user-select: none;
 }
 
 .table thead {

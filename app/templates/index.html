@@ -119,8 +119,42 @@
             // Update stats
             updateStats(items, locations);
 
-            // Display recent items
-            displayRecentItems(items.slice(0, 10), locations);
+            // Display recent items (sorted by most recently updated/created/acquired)
+            const sortedItems = items.slice().sort((a, b) => {
+                // Primary: updated_at (descending - newest first)
+                const aUpdated = a.updated_at ? new Date(a.updated_at) : null;
+                const bUpdated = b.updated_at ? new Date(b.updated_at) : null;
+
+                if (aUpdated && bUpdated) {
+                    const diff = bUpdated - aUpdated;
+                    if (diff !== 0) return diff;
+                }
+                if (aUpdated && !bUpdated) return -1;
+                if (!aUpdated && bUpdated) return 1;
+
+                // Fallback: created_at (descending)
+                const aCreated = a.created_at ? new Date(a.created_at) : null;
+                const bCreated = b.created_at ? new Date(b.created_at) : null;
+
+                if (aCreated && bCreated) {
+                    const diff = bCreated - aCreated;
+                    if (diff !== 0) return diff;
+                }
+                if (aCreated && !bCreated) return -1;
+                if (!aCreated && bCreated) return 1;
+
+                // Fallback: acquired_date (descending)
+                const aAcquired = a.acquired_date ? new Date(a.acquired_date) : null;
+                const bAcquired = b.acquired_date ? new Date(b.acquired_date) : null;
+
+                if (aAcquired && bAcquired) return bAcquired - aAcquired;
+                if (aAcquired && !bAcquired) return -1;
+                if (!aAcquired && bAcquired) return 1;
+
+                return 0;
+            });
+
+            displayRecentItems(sortedItems.slice(0, 10), locations);
 
             // Create charts
             createCategoryChart(items);
