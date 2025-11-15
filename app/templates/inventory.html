@@ -5,21 +5,23 @@
 {% block extra_css %}
 <style>
     /* Hide checkboxes by default */
-    .table th:first-child,
-    .table td:first-child {
+    .table tbody td:first-child {
         opacity: 0;
         transition: opacity 0.2s ease-in-out;
     }
 
-    /* Show checkboxes on table hover */
-    .table:hover th:first-child,
-    .table:hover td:first-child {
+    /* Keep header checkbox always visible */
+    .table thead th:first-child {
+        opacity: 1;
+    }
+
+    /* Show checkbox only on specific row hover */
+    .table tbody tr:hover td:first-child {
         opacity: 1;
     }
 
     /* Also show checkboxes when any checkbox is checked */
-    .table.has-selections th:first-child,
-    .table.has-selections td:first-child {
+    .table.has-selections tbody td:first-child {
         opacity: 1;
     }
 
@@ -34,13 +36,38 @@
         opacity: 1;
     }
 
-    /* Show action buttons on row hover */
+    /* Show action buttons only on specific row hover */
     .table tbody tr:hover td:last-child {
         opacity: 1;
     }
 
-    /* Show action buttons on table hover */
-    .table:hover tbody td:last-child {
+    /* Sortable column headers */
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding-right: 20px;
+    }
+
+    .sortable:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .sortable::after {
+        content: '⇅';
+        position: absolute;
+        right: 5px;
+        opacity: 0.3;
+        font-size: 0.8rem;
+    }
+
+    .sortable.asc::after {
+        content: '↑';
+        opacity: 1;
+    }
+
+    .sortable.desc::after {
+        content: '↓';
         opacity: 1;
     }
 </style>
@@ -215,6 +242,11 @@
     let selectedLocationId = null;
     let itemsToDelete = []; // Track items pending deletion
     let editingItemId = null; // Track item being edited
+    let currentDisplayedItems = []; // Track currently displayed items
+    let sortState = {
+        acquired: null, // null, 'asc', or 'desc'
+        expiry: null
+    };
 
     async function loadInventory() {
         try {
@@ -309,6 +341,11 @@
     function selectLocation(locationId) {
         selectedLocationId = locationId;
         const filtered = allItems.filter(item => item.location_id === locationId);
+
+        // Reset sort state on location change
+        sortState.acquired = null;
+        sortState.expiry = null;
+
         displayItems(filtered);
     }
 
@@ -334,12 +371,19 @@
             filtered = filtered.filter(item => item.expiry_status === expiryStatus);
         }
 
+        // Reset sort state on new search
+        sortState.acquired = null;
+        sortState.expiry = null;
+
         displayItems(filtered);
     }
 
     function displayItems(items) {
         const container = document.getElementById('items-container');
         document.getElementById('item-count').textContent = `${items.length} items`;
+
+        // Store currently displayed items for sorting
+        currentDisplayedItems = [...items];
 
         if (items.length === 0) {
             container.innerHTML = `
@@ -364,8 +408,8 @@
                             <th>Category</th>
                             <th>Quantity</th>
                             <th>Location</th>
-                            <th>Acquired</th>
-                            <th>Expiry</th>
+                            <th class="sortable" onclick="sortByDate('acquired')" id="acquired-header">Acquired</th>
+                            <th class="sortable" onclick="sortByDate('expiry')" id="expiry-header">Expiry</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -409,6 +453,71 @@
         `;
         container.innerHTML = table;
         updateSelectedCount();
+
+        // Restore sort indicators
+        updateSortIndicators();
+    }
+
+    function sortByDate(column) {
+        // Determine next sort state: null -> desc -> asc -> null
+        if (sortState[column] === null) {
+            sortState[column] = 'desc';
+        } else if (sortState[column] === 'desc') {
+            sortState[column] = 'asc';
+        } else {
+            sortState[column] = null;
+        }
+
+        // Reset other column's sort state
+        const otherColumn = column === 'acquired' ? 'expiry' : 'acquired';
+        sortState[otherColumn] = null;
+
+        // Sort the items
+        const sortedItems = [...currentDisplayedItems];
+
+        if (sortState[column] !== null) {
+            sortedItems.sort((a, b) => {
+                const dateA = column === 'acquired' ? a.acquired_date : a.expiry_date;
+                const dateB = column === 'acquired' ? b.acquired_date : b.expiry_date;
+
+                // Handle null dates (put them at the end)
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                const dateObjA = new Date(dateA);
+                const dateObjB = new Date(dateB);
+
+                if (sortState[column] === 'desc') {
+                    return dateObjB - dateObjA; // Newest first
+                } else {
+                    return dateObjA - dateObjB; // Oldest first
+                }
+            });
+        }
+
+        // Re-display with sorted items
+        displayItems(sortedItems);
+    }
+
+    function updateSortIndicators() {
+        // Update header classes
+        const acquiredHeader = document.getElementById('acquired-header');
+        const expiryHeader = document.getElementById('expiry-header');
+
+        if (acquiredHeader) {
+            acquiredHeader.className = 'sortable';
+            if (sortState.acquired) {
+                acquiredHeader.classList.add(sortState.acquired);
+            }
+        }
+
+        if (expiryHeader) {
+            expiryHeader.className = 'sortable';
+            if (sortState.expiry) {
+                expiryHeader.classList.add(sortState.expiry);
+            }
+        }
     }
 
     function showAddModal() {
