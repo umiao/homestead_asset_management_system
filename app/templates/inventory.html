@@ -283,6 +283,11 @@
         acquired: null, // null, 'asc', or 'desc'
         expiry: null
     };
+    let filterState = {
+        query: '',
+        category: '',
+        expiryStatus: ''
+    };
 
     async function loadInventory() {
         try {
@@ -297,9 +302,16 @@
             populateCategoryFilter(categories);
             populateCategoryDatalist(categories);
 
+            // Restore filter state to UI
+            document.getElementById('search-input').value = filterState.query;
+            document.getElementById('category-filter').value = filterState.category;
+            document.getElementById('expiry-filter').value = filterState.expiryStatus;
+
             // Display
             displayLocationTree(allLocations);
-            displayItems(allItems);
+
+            // Apply saved filters and sorting
+            searchItems();
 
         } catch (error) {
             console.error('Error loading inventory:', error);
@@ -394,6 +406,11 @@
         const query = document.getElementById('search-input').value.toLowerCase();
         const category = document.getElementById('category-filter').value;
         const expiryStatus = document.getElementById('expiry-filter').value;
+
+        // Save filter state
+        filterState.query = query;
+        filterState.category = category;
+        filterState.expiryStatus = expiryStatus;
 
         let filtered = allItems;
 
@@ -828,6 +845,10 @@
                 searchItems();
             }
         });
+
+        // Auto-trigger search on dropdown changes
+        document.getElementById('category-filter').addEventListener('change', searchItems);
+        document.getElementById('expiry-filter').addEventListener('change', searchItems);
 
         // Check if we should open add item modal
         const urlParams = new URLSearchParams(window.location.search);
