@@ -4,22 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PantryPilot - Household Asset Management{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.0">
     {% block extra_css %}{% endblock %}
+
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <header>
         <div class="container">
             <div class="header-content">
                 <a href="/" class="logo">
-                    <span class="logo-icon">🏠</span>
+                    <i data-lucide="home" style="width: 32px; height: 32px;"></i>
                     <span>家庭资产管理盘存系统</span>
                 </a>
                 <nav>
-                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
-                    <a href="/inventory" class="nav-link {% if request.url.path == '/inventory' %}active{% endif %}">Inventory</a>
-                    <a href="/import" class="nav-link {% if request.url.path == '/import' %}active{% endif %}">Import</a>
-                    <a href="/alerts" class="nav-link {% if request.url.path == '/alerts' %}active{% endif %}">Alerts</a>
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+                        <i data-lucide="layout-dashboard" class="icon-sm"></i>
+                        Dashboard
+                    </a>
+                    <a href="/inventory" class="nav-link {% if request.url.path == '/inventory' %}active{% endif %}">
+                        <i data-lucide="package" class="icon-sm"></i>
+                        Inventory
+                    </a>
+                    <a href="/import" class="nav-link {% if request.url.path == '/import' %}active{% endif %}">
+                        <i data-lucide="download" class="icon-sm"></i>
+                        Import
+                    </a>
+                    <a href="/alerts" class="nav-link {% if request.url.path == '/alerts' %}active{% endif %}">
+                        <i data-lucide="bell" class="icon-sm"></i>
+                        Alerts
+                    </a>
                 </nav>
             </div>
         </div>
@@ -84,5 +99,12 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>

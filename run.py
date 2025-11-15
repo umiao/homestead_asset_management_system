@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("PantryPilot - PRODUCTION Environment")
     print("=" * 60)
-    print("\n✓ Running in PRODUCTION mode")
+    print("\n[PRODUCTION] Running in PRODUCTION mode")
     print("Database: data/pantrypilot.db")
     print("\nStarting server...")
     print("URL: http://localhost:8000")

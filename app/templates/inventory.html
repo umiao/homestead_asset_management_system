@@ -106,7 +106,7 @@
 <!-- Search and Filters -->
 <div class="card">
     <div class="search-bar">
-        <input type="text" id="search-input" class="search-input" placeholder="🔍 Search items...">
+        <input type="text" id="search-input" class="search-input" placeholder="Search items...">
         <select id="category-filter" class="form-select" style="width: 200px;">
             <option value="">All Categories</option>
         </select>
@@ -118,9 +118,18 @@
             <option value="no_expiry">No Expiry</option>
             <option value="n/a">N/A (Non-Food)</option>
         </select>
-        <button onclick="searchItems()" class="btn btn-primary">Search</button>
-        <button onclick="showAddModal()" class="btn btn-success">➕ Add Item</button>
-        <button onclick="deleteSelected()" class="btn btn-danger" id="delete-selected-btn" style="display: none;">🗑️ Delete Selected (<span id="selected-count">0</span>)</button>
+        <button onclick="searchItems()" class="btn btn-primary">
+            <i data-lucide="search" class="icon"></i>
+            Search
+        </button>
+        <button onclick="showAddModal()" class="btn btn-success">
+            <i data-lucide="plus-circle" class="icon"></i>
+            Add Item
+        </button>
+        <button onclick="deleteSelected()" class="btn btn-danger" id="delete-selected-btn" style="display: none;">
+            <i data-lucide="trash-2" class="icon"></i>
+            Delete Selected (<span id="selected-count">0</span>)
+        </button>
     </div>
 </div>
 
@@ -345,6 +354,9 @@
 
         // Render tree
         container.innerHTML = '<ul class="tree">' + renderLocationNodes(rootLocations) + '</ul>';
+
+        // Reinitialize lucide icons
+        lucide.createIcons();
     }
 
     function renderLocationNodes(nodes) {
@@ -355,7 +367,9 @@
             return `
                 <li class="tree-item">
                     <div class="tree-node" onclick="selectLocation(${node.id})">
-                        <span class="tree-icon">${hasChildren ? '📁' : '📂'}</span>
+                        <span class="tree-icon">
+                            <i data-lucide="${hasChildren ? 'folder' : 'folder-open'}" style="width: 18px; height: 18px;"></i>
+                        </span>
                         <span class="tree-label">${node.name}</span>
                         ${itemCount > 0 ? `<span class="tree-count">${itemCount}</span>` : ''}
                     </div>
@@ -415,11 +429,14 @@
         if (items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-icon">
+                        <i data-lucide="package" style="width: 64px; height: 64px;"></i>
+                    </div>
                     <div class="empty-state-title">No items found</div>
                     <p>Try adjusting your filters or add new items</p>
                 </div>
             `;
+            lucide.createIcons();
             return;
         }
 

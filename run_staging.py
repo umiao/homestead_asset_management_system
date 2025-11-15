@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("PantryPilot - STAGING Environment")
     print("=" * 60)
-    print("\n⚠️  Running in STAGING mode")
+    print("\n[WARNING] Running in STAGING mode")
     print("Database: data/pantrypilot_staging.db")
     print("\nStarting server...")
     print("URL: http://localhost:8000")

@@ -3,23 +3,27 @@
 {% block title %}Dashboard - PantryPilot{% endblock %}
 
 {% block content %}
-<h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Dashboard</h1>
+<h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Dashboard Overview</h1>
 
 <!-- Stats Cards -->
 <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card" style="background: var(--gradient-primary);">
+        <i data-lucide="package" style="width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
         <div class="stat-label">Total Items</div>
         <div class="stat-value" id="stat-total">0</div>
     </div>
-    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+    <div class="stat-card" style="background: var(--gradient-warning);">
+        <i data-lucide="alert-triangle" style="width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
         <div class="stat-label">Expiring Soon</div>
         <div class="stat-value" id="stat-expiring">0</div>
     </div>
-    <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+    <div class="stat-card" style="background: var(--gradient-success);">
+        <i data-lucide="layers" style="width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
         <div class="stat-label">Categories</div>
         <div class="stat-value" id="stat-categories">0</div>
     </div>
-    <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+    <div class="stat-card" style="background: var(--gradient-purple);">
+        <i data-lucide="map-pin" style="width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
         <div class="stat-label">Locations</div>
         <div class="stat-value" id="stat-locations">0</div>
     </div>
@@ -31,29 +35,70 @@
         <h2 class="card-title">Quick Actions</h2>
     </div>
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="/inventory" class="btn btn-primary">📦 View Inventory</a>
-        <a href="/import" class="btn btn-success">📥 Import Data</a>
-        <a href="/alerts" class="btn btn-secondary">⚠️ View Alerts</a>
-        <button onclick="addNewItem()" class="btn btn-primary">➕ Add Item</button>
+        <a href="/inventory" class="btn btn-primary">
+            <i data-lucide="package" class="icon"></i>
+            View Inventory
+        </a>
+        <a href="/import" class="btn btn-success">
+            <i data-lucide="download" class="icon"></i>
+            Import Data
+        </a>
+        <a href="/alerts" class="btn btn-secondary">
+            <i data-lucide="bell" class="icon"></i>
+            View Alerts
+        </a>
+        <button onclick="addNewItem()" class="btn btn-primary">
+            <i data-lucide="plus-circle" class="icon"></i>
+            Add Item
+        </button>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="dashboard-grid">
+    <!-- Category Distribution -->
+    <div class="chart-card">
+        <h3 class="card-title">
+            <i data-lucide="pie-chart" class="icon"></i>
+            Category Distribution
+        </h3>
+        <div class="chart-container" style="height: 280px;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Expiry Trend -->
+    <div class="chart-card">
+        <h3 class="card-title">
+            <i data-lucide="trending-up" class="icon"></i>
+            Expiry Trend (Next 30 Days)
+        </h3>
+        <div class="chart-container" style="height: 280px;">
+            <canvas id="expiryTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Location Heatmap -->
+    <div class="chart-card dashboard-grid-full">
+        <h3 class="card-title">
+            <i data-lucide="map" class="icon"></i>
+            Top 10 Locations by Item Count
+        </h3>
+        <div class="chart-container">
+            <canvas id="locationChart"></canvas>
+        </div>
     </div>
 </div>
 
 <!-- Recent Items -->
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title">Recent Items</h2>
+        <h2 class="card-title">
+            <i data-lucide="clock" class="icon"></i>
+            Recent Items
+        </h2>
     </div>
     <div id="recent-items-container">
-        <div class="spinner"></div>
-    </div>
-</div>
-
-<!-- Category Breakdown -->
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title">Category Breakdown</h2>
-    </div>
-    <div id="category-breakdown">
         <div class="spinner"></div>
     </div>
 </div>
@@ -61,36 +106,243 @@
 
 {% block extra_js %}
 <script>
+    let categoryChart, expiryTrendChart, locationChart;
+
     async function loadDashboard() {
         try {
             // Load all items
             const items = await fetchAPI('/inventory/items?limit=1000');
 
-            // Update stats
-            document.getElementById('stat-total').textContent = items.length;
-
-            // Count expiring soon
-            const expiringSoon = items.filter(item => item.expiry_status === 'expiring_soon' || item.expiry_status === 'expired');
-            document.getElementById('stat-expiring').textContent = expiringSoon.length;
-
-            // Count categories
-            const categories = new Set(items.map(item => item.category));
-            document.getElementById('stat-categories').textContent = categories.size;
-
             // Load locations
             const locations = await fetchAPI('/inventory/locations');
-            document.getElementById('stat-locations').textContent = locations.length;
 
-            // Display recent items (last 10)
+            // Update stats
+            updateStats(items, locations);
+
+            // Display recent items
             displayRecentItems(items.slice(0, 10), locations);
 
-            // Display category breakdown
-            displayCategoryBreakdown(items);
+            // Create charts
+            createCategoryChart(items);
+            createExpiryTrendChart(items);
+            createLocationChart(items, locations);
+
+            // Initialize icons
+            lucide.createIcons();
 
         } catch (error) {
             console.error('Error loading dashboard:', error);
             showMessage('Error loading dashboard data', 'error');
         }
+    }
+
+    function updateStats(items, locations) {
+        document.getElementById('stat-total').textContent = items.length.toLocaleString();
+
+        // Count expiring soon
+        const expiringSoon = items.filter(item =>
+            item.expiry_status === 'expiring_soon' || item.expiry_status === 'expired'
+        );
+        document.getElementById('stat-expiring').textContent = expiringSoon.length;
+
+        // Count categories
+        const categories = new Set(items.map(item => item.category));
+        document.getElementById('stat-categories').textContent = categories.size;
+
+        // Count locations
+        document.getElementById('stat-locations').textContent = locations.length;
+    }
+
+    function createCategoryChart(items) {
+        // Group by category
+        const categoryMap = {};
+        items.forEach(item => {
+            categoryMap[item.category] = (categoryMap[item.category] || 0) + 1;
+        });
+
+        const sortedCategories = Object.entries(categoryMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+
+        if (categoryChart) categoryChart.destroy();
+
+        categoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: sortedCategories.map(([cat]) => cat),
+                datasets: [{
+                    data: sortedCategories.map(([, count]) => count),
+                    backgroundColor: [
+                        'rgba(14, 165, 233, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(100, 116, 139, 0.8)',
+                        'rgba(148, 163, 184, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} items (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createExpiryTrendChart(items) {
+        // Calculate expiry trend for next 30 days
+        const today = new Date();
+        const daysData = Array(30).fill(0);
+        const labels = [];
+
+        for (let i = 0; i < 30; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() + i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+
+        items.forEach(item => {
+            if (item.expiry_date) {
+                const expiryDate = new Date(item.expiry_date);
+                const diffDays = Math.floor((expiryDate - today) / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0 && diffDays < 30) {
+                    daysData[diffDays]++;
+                }
+            }
+        });
+
+        const ctx = document.getElementById('expiryTrendChart').getContext('2d');
+
+        if (expiryTrendChart) expiryTrendChart.destroy();
+
+        expiryTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Items Expiring',
+                    data: daysData,
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: {
+                                size: 9
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createLocationChart(items, locations) {
+        // Count items per location
+        const locationMap = {};
+        items.forEach(item => {
+            const location = locations.find(loc => loc.id === item.location_id);
+            if (location) {
+                const path = location.full_path;
+                locationMap[path] = (locationMap[path] || 0) + 1;
+            }
+        });
+
+        const sortedLocations = Object.entries(locationMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        const ctx = document.getElementById('locationChart').getContext('2d');
+
+        if (locationChart) locationChart.destroy();
+
+        locationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedLocations.map(([loc]) => loc),
+                datasets: [{
+                    label: 'Number of Items',
+                    data: sortedLocations.map(([, count]) => count),
+                    backgroundColor: 'rgba(14, 165, 233, 0.8)',
+                    borderColor: 'rgba(14, 165, 233, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
     }
 
     function displayRecentItems(items, locations) {
@@ -99,11 +351,12 @@
         if (items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-icon"><i data-lucide="package" style="width: 64px; height: 64px;"></i></div>
                     <div class="empty-state-title">No items yet</div>
                     <p>Start by importing data or adding items manually</p>
                 </div>
             `;
+            lucide.createIcons();
             return;
         }
 
@@ -143,47 +396,6 @@
             </div>
         `;
         container.innerHTML = table;
-    }
-
-    function displayCategoryBreakdown(items) {
-        const container = document.getElementById('category-breakdown');
-
-        // Group by category
-        const categoryMap = {};
-        items.forEach(item => {
-            if (!categoryMap[item.category]) {
-                categoryMap[item.category] = 0;
-            }
-            categoryMap[item.category]++;
-        });
-
-        const categories = Object.entries(categoryMap)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
-
-        if (categories.length === 0) {
-            container.innerHTML = '<p style="color: var(--text-secondary);">No categories yet</p>';
-            return;
-        }
-
-        const maxCount = Math.max(...categories.map(c => c[1]));
-
-        const html = categories.map(([category, count]) => {
-            const percentage = (count / maxCount) * 100;
-            return `
-                <div style="margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500;">${category}</span>
-                        <span style="color: var(--text-secondary);">${count} items</span>
-                    </div>
-                    <div style="background-color: var(--light-bg); border-radius: 9999px; height: 8px; overflow: hidden;">
-                        <div style="background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = html;
     }
 
     function addNewItem() {
