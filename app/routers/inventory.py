@@ -102,12 +102,12 @@ def get_item(item_id: int, session: Session = Depends(get_session)):
     }
 
 
-@router.post("/items", response_model=Item)
+@router.post("/items")
 def create_item(
     item_data: dict = Body(...),
     session: Session = Depends(get_session)
 ):
-    """Create new inventory item."""
+    """Create new inventory item(s). Supports comma-separated names for bulk creation."""
     # Get or create household
     household = crud.get_or_create_household(session)
 
@@ -133,20 +133,63 @@ def create_item(
     elif not expiry_date:
         expiry_date = None
 
-    # Create item
-    item = Item(
-        name=item_data.get("name"),
-        category=item_data.get("category"),
-        quantity=item_data.get("quantity"),
-        unit=item_data.get("unit"),
-        location_id=location.id,
-        household_id=household.id,
-        acquired_date=acquired_date,
-        expiry_date=expiry_date,
-        notes=item_data.get("notes")
-    )
+    # Check if name contains commas for bulk creation
+    name_input = item_data.get("name", "")
 
-    return crud.create_item(session, item)
+    if not name_input or not name_input.strip():
+        raise HTTPException(status_code=400, detail="name is required")
+
+    # Check if comma exists (support both English and Chinese commas)
+    if "," in name_input or "，" in name_input:
+        # Normalize Chinese comma to English comma, then split
+        normalized_input = name_input.replace("，", ",")
+        names = [n.strip() for n in normalized_input.split(",") if n.strip()]
+    else:
+        # Single item
+        names = [name_input.strip()]
+
+    created_items = []
+
+    # Create item(s)
+    for name in names:
+        item = Item(
+            name=name,
+            category=item_data.get("category"),
+            quantity=item_data.get("quantity"),
+            unit=item_data.get("unit"),
+            location_id=location.id,
+            household_id=household.id,
+            acquired_date=acquired_date,
+            expiry_date=expiry_date,
+            notes=item_data.get("notes")
+        )
+        created_item = crud.create_item(session, item)
+        created_items.append(created_item)
+
+    # Return single item or list based on input
+    if len(created_items) == 1:
+        return created_items[0]
+    else:
+        return {
+            "message": f"Successfully created {len(created_items)} items",
+            "items": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "category": item.category,
+                    "quantity": item.quantity,
+                    "unit": item.unit,
+                    "location_id": item.location_id,
+                    "household_id": item.household_id,
+                    "acquired_date": item.acquired_date.isoformat() if item.acquired_date else None,
+                    "expiry_date": item.expiry_date.isoformat() if item.expiry_date else None,
+                    "notes": item.notes,
+                    "created_at": item.created_at.isoformat() if item.created_at else None
+                }
+                for item in created_items
+            ],
+            "count": len(created_items)
+        }
 
 
 @router.put("/items/{item_id}", response_model=Item)

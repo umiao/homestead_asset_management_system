@@ -11,7 +11,9 @@
       "Bash(if exist datapantrypilot.db del datapantrypilot.db)",
       "Bash(python -c \"import os; path=''data/pantrypilot.db''; os.remove(path) if os.path.exists(path) else None; print(''Database deleted'' if not os.path.exists(path) else ''Failed'')\")",
       "Bash(nul)",
-      "Bash(python fix_encoding.py:*)"
+      "Bash(python fix_encoding.py:*)",
+      "Bash(python test_features.py:*)",
+      "Bash(python test_comma_support.py:*)"
     ],
     "deny": [],
     "ask": []

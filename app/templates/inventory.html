@@ -2,6 +2,50 @@
 
 {% block title %}Inventory - PantryPilot{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Hide checkboxes by default */
+    .table th:first-child,
+    .table td:first-child {
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Show checkboxes on table hover */
+    .table:hover th:first-child,
+    .table:hover td:first-child {
+        opacity: 1;
+    }
+
+    /* Also show checkboxes when any checkbox is checked */
+    .table.has-selections th:first-child,
+    .table.has-selections td:first-child {
+        opacity: 1;
+    }
+
+    /* Hide action buttons by default */
+    .table tbody td:last-child {
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Keep the header visible */
+    .table thead th:last-child {
+        opacity: 1;
+    }
+
+    /* Show action buttons on row hover */
+    .table tbody tr:hover td:last-child {
+        opacity: 1;
+    }
+
+    /* Show action buttons on table hover */
+    .table:hover tbody td:last-child {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Inventory Management</h1>
 
@@ -60,8 +104,8 @@
         <form id="item-form" onsubmit="saveItem(event)">
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Name *</label>
-                    <input type="text" id="item-name" class="form-input" required>
+                    <label class="form-label">Name * <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">(支持逗号分隔批量添加 / comma-separated for bulk add)</span></label>
+                    <input type="text" id="item-name" class="form-input" placeholder="e.g., Apple, Orange, Banana or 苹果，橙子，香蕉" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Category *</label>
@@ -431,13 +475,19 @@
                 });
                 showMessage('Item updated successfully', 'success');
             } else {
-                // Create new item
-                await fetchAPI('/inventory/items', {
+                // Create new item(s)
+                const result = await fetchAPI('/inventory/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
-                showMessage('Item added successfully', 'success');
+
+                // Check if multiple items were created
+                if (result.count && result.count > 1) {
+                    showMessage(`Successfully created ${result.count} items`, 'success');
+                } else {
+                    showMessage('Item added successfully', 'success');
+                }
             }
 
             closeModal();
@@ -471,6 +521,16 @@
         const selectAllCheckbox = document.getElementById('select-all');
         if (selectAllCheckbox && allCheckboxes.length > 0) {
             selectAllCheckbox.checked = count === allCheckboxes.length;
+        }
+
+        // Toggle has-selections class to keep checkboxes visible when items are selected
+        const table = document.querySelector('.table');
+        if (table) {
+            if (count > 0) {
+                table.classList.add('has-selections');
+            } else {
+                table.classList.remove('has-selections');
+            }
         }
     }
 
