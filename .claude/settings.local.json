@@ -15,7 +15,10 @@
       "Bash(python test_features.py:*)",
       "Bash(python test_comma_support.py:*)",
       "Bash(python cleanup_test_data.py:*)",
-      "Bash(python run_staging.py:*)"
+      "Bash(python run_staging.py:*)",
+      "Bash(python -m app.services.llm_ocr:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

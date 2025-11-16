@@ -2,6 +2,29 @@
 *.db
 *.tsv
 *.log
+*.png
 
 # Also ignore files that literally end with 'db' (no dot before)
 *db
+
+# Secret files (API keys, credentials)
+*.secret
+.env
+.env.local
+
+# Uploaded receipts and images
+data/receipts/
+uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

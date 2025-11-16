@@ -5,6 +5,100 @@
 {% block content %}
 <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Import Data</h1>
 
+<!-- Receipt OCR Upload -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="camera" class="icon"></i>
+            Smart Receipt Scanner (AI-Powered)
+        </h2>
+    </div>
+    <div class="alert alert-info" id="ocr-status-message">
+        <strong>🤖 AI-Powered Item Recognition</strong>
+        <p style="margin-top: 0.5rem;">Upload a photo of your receipt or product, and AI will automatically extract items, categories, and expiry dates.</p>
+    </div>
+
+    <!-- Receipt Upload -->
+    <div style="margin-top: 1.5rem;">
+        <div class="form-group">
+            <label class="form-label">
+                <i data-lucide="upload" class="icon-sm"></i>
+                Upload Receipt or Product Photo
+            </label>
+            <input type="file" id="receipt-input" class="form-input" accept="image/jpeg,image/png,image/jpg,image/webp">
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                Supported formats: JPG, PNG, WEBP | Max size: 10MB
+            </p>
+        </div>
+
+        <div class="form-group" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="auto-import-receipt">
+                <span>Automatically add items to inventory after recognition</span>
+            </label>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button onclick="uploadReceipt()" class="btn btn-success" id="upload-receipt-btn">
+                <i data-lucide="scan" class="icon-sm"></i>
+                Scan & Extract Items
+            </button>
+            <button onclick="checkOCRStatus()" class="btn btn-secondary">
+                <i data-lucide="info" class="icon-sm"></i>
+                Check OCR Service Status
+            </button>
+        </div>
+    </div>
+
+    <!-- OCR Results -->
+    <div id="ocr-results" style="margin-top: 1.5rem; display: none;">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">
+            <i data-lucide="check-circle" class="icon-sm"></i>
+            Recognized Items
+        </h3>
+        <div id="ocr-results-content"></div>
+    </div>
+
+    <!-- Image Preview -->
+    <div id="receipt-preview" style="margin-top: 1rem; display: none;">
+        <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary);">Preview:</h4>
+        <img id="preview-image" style="max-width: 100%; max-height: 300px; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+    </div>
+</div>
+
+<!-- OCR Edit Modal -->
+<div id="ocr-edit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div class="card" style="max-width: 90%; width: 1200px; margin: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="edit" class="icon"></i>
+                Review & Edit Recognized Items
+            </h3>
+            <button onclick="closeOCREditModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+
+        <div style="padding: 1.5rem;">
+            <div class="alert alert-info" style="margin-bottom: 1.5rem;">
+                <strong>📝 Review the recognized items below</strong>
+                <p style="margin-top: 0.5rem;">Edit any fields as needed, then click "Import All" to add to inventory.</p>
+            </div>
+
+            <div id="ocr-items-edit-container"></div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                <button onclick="closeOCREditModal()" class="btn btn-secondary">
+                    <i data-lucide="x" class="icon-sm"></i>
+                    Cancel
+                </button>
+                <button onclick="importEditedItems()" class="btn btn-success" id="import-edited-btn">
+                    <i data-lucide="check" class="icon-sm"></i>
+                    Import All Items
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Import Instructions -->
 <div class="card">
     <div class="card-header">
@@ -323,8 +417,306 @@
         container.innerHTML = table;
     }
 
+    // ===== Receipt OCR Functions =====
+
+    // Preview image when selected
+    document.getElementById('receipt-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('preview-image').src = event.target.result;
+                document.getElementById('receipt-preview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    async function checkOCRStatus() {
+        try {
+            const response = await fetch('/api/receipt/status');
+            const status = await response.json();
+
+            const statusMsg = document.getElementById('ocr-status-message');
+
+            if (status.available) {
+                statusMsg.innerHTML = `
+                    <strong style="color: var(--success-color);">✅ OCR Service Ready</strong>
+                    <p style="margin-top: 0.5rem;">
+                        Model: ${status.model}<br>
+                        API Key: ${status.api_key_configured ? 'Configured ✓' : 'Not configured ✗'}
+                    </p>
+                `;
+            } else {
+                statusMsg.innerHTML = `
+                    <strong style="color: var(--danger-color);">❌ OCR Service Not Available</strong>
+                    <p style="margin-top: 0.5rem;">
+                        Error: ${status.error}<br>
+                        ${status.install_command ? `Install: <code>${status.install_command}</code>` : ''}
+                    </p>
+                    ${status.instructions ? `<ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                        ${status.instructions.map(i => `<li>${i}</li>`).join('')}
+                    </ul>` : ''}
+                `;
+            }
+
+            lucide.createIcons();
+        } catch (error) {
+            console.error('Error checking OCR status:', error);
+            showMessage('Failed to check OCR status', 'error');
+        }
+    }
+
+    let recognizedItems = [];  // Store recognized items globally
+
+    async function uploadReceipt() {
+        const fileInput = document.getElementById('receipt-input');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showMessage('请选择图片文件 / Please select an image file', 'error');
+            return;
+        }
+
+        const uploadBtn = document.getElementById('upload-receipt-btn');
+        const originalText = uploadBtn.innerHTML;
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i data-lucide="loader" class="icon-sm animate-spin"></i> Processing...';
+        lucide.createIcons();
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Don't auto-import, just recognize
+            const response = await fetch(`/api/receipt/upload?auto_import=false`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                recognizedItems = result.ocr_result.items;
+                showMessage(
+                    `成功识别 ${result.ocr_result.items_found} 个物品！/ Successfully recognized ${result.ocr_result.items_found} items!`,
+                    'success'
+                );
+
+                // Show edit modal instead of direct import
+                showOCREditModal(recognizedItems);
+
+                // Clear file input
+                fileInput.value = '';
+                document.getElementById('receipt-preview').style.display = 'none';
+            } else {
+                showMessage(`识别失败 / Recognition failed: ${result.details || result.error}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error uploading receipt:', error);
+            showMessage('上传失败 / Upload error: ' + error.message, 'error');
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalText;
+            lucide.createIcons();
+        }
+    }
+
+    function showOCREditModal(items) {
+        const container = document.getElementById('ocr-items-edit-container');
+        const modal = document.getElementById('ocr-edit-modal');
+
+        let html = '';
+        items.forEach((item, index) => {
+            html += `
+                <div class="card" style="margin-bottom: 1rem; background-color: var(--card-hover-bg);">
+                    <div style="padding: 1rem;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Name / 名称 *</label>
+                                <input type="text" class="form-input" value="${item.name}" data-index="${index}" data-field="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Category / 类别 *</label>
+                                <input type="text" class="form-input" value="${item.category}" data-index="${index}" data-field="category" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Quantity / 数量</label>
+                                <input type="number" class="form-input" value="${item.quantity}" data-index="${index}" data-field="quantity" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Unit / 单位</label>
+                                <input type="text" class="form-input" value="${item.unit}" data-index="${index}" data-field="unit">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Location / 位置 *</label>
+                                <input type="text" class="form-input" value="${item.location_path}" data-index="${index}" data-field="location_path" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Acquired Date / 购买日期</label>
+                                <input type="date" class="form-input" value="${item.acquired_date || ''}" data-index="${index}" data-field="acquired_date">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Expiry Date / 过期日期</label>
+                                <input type="date" class="form-input" value="${item.expiry_date || ''}" data-index="${index}" data-field="expiry_date">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Notes / 备注</label>
+                                <input type="text" class="form-input" value="${item.notes || ''}" data-index="${index}" data-field="notes">
+                            </div>
+                        </div>
+                        <button onclick="removeOCRItem(${index})" class="btn btn-danger btn-sm" style="margin-top: 0.5rem;">
+                            <i data-lucide="trash-2" class="icon-sm"></i>
+                            Remove this item
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        modal.style.display = 'flex';
+        lucide.createIcons();
+
+        // Add event listeners to update recognizedItems on change
+        document.querySelectorAll('#ocr-items-edit-container input').forEach(input => {
+            input.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                const field = this.dataset.field;
+                recognizedItems[index][field] = this.value;
+            });
+        });
+    }
+
+    function closeOCREditModal() {
+        document.getElementById('ocr-edit-modal').style.display = 'none';
+    }
+
+    function removeOCRItem(index) {
+        if (confirm('确认移除此项？ / Remove this item?')) {
+            recognizedItems.splice(index, 1);
+            showOCREditModal(recognizedItems);
+        }
+    }
+
+    async function importEditedItems() {
+        const importBtn = document.getElementById('import-edited-btn');
+        const originalText = importBtn.innerHTML;
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<i data-lucide="loader" class="icon-sm animate-spin"></i> Importing...';
+        lucide.createIcons();
+
+        try {
+            let successCount = 0;
+            let failedCount = 0;
+            const results = [];
+
+            for (const item of recognizedItems) {
+                try {
+                    const response = await fetchAPI('/inventory/items', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item)
+                    });
+
+                    successCount++;
+                    results.push({ success: true, item: item.name });
+                } catch (error) {
+                    failedCount++;
+                    results.push({ success: false, item: item.name, error: error.message });
+                }
+            }
+
+            if (successCount > 0) {
+                showMessage(
+                    `成功导入 ${successCount} 件物品！/ Successfully imported ${successCount} items!` +
+                    (failedCount > 0 ? ` (${failedCount} failed)` : ''),
+                    successCount > 0 ? 'success' : 'error'
+                );
+            }
+
+            closeOCREditModal();
+            recognizedItems = [];
+
+        } catch (error) {
+            console.error('Error importing items:', error);
+            showMessage('导入失败 / Import failed: ' + error.message, 'error');
+        } finally {
+            importBtn.disabled = false;
+            importBtn.innerHTML = originalText;
+            lucide.createIcons();
+        }
+    }
+
+    function displayOCRResults(result) {
+        const container = document.getElementById('ocr-results-content');
+        const ocrResults = document.getElementById('ocr-results');
+
+        const items = result.ocr_result.items;
+        const importResults = result.import_results;
+
+        let html = `
+            <div class="alert alert-success" style="margin-bottom: 1rem;">
+                <strong>📊 Recognition Summary</strong><br>
+                Items Found: ${result.ocr_result.items_found}<br>
+                ${importResults.auto_import ? `
+                    Imported: ${importResults.successful} / ${importResults.total}
+                    ${importResults.failed > 0 ? `<span style="color: var(--danger-color);">(${importResults.failed} failed)</span>` : ''}
+                ` : 'Auto-import disabled'}
+            </div>
+
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name / 名称</th>
+                            <th>Category / 类别</th>
+                            <th>Quantity / 数量</th>
+                            <th>Location / 位置</th>
+                            <th>Expiry / 过期</th>
+                            <th>Status / 状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map((item, index) => {
+                            const importStatus = importResults.details[index];
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600;">${item.name}</td>
+                                    <td>${item.category}</td>
+                                    <td>${item.quantity} ${item.unit}</td>
+                                    <td style="font-size: 0.875rem;">${item.location_path}</td>
+                                    <td style="font-size: 0.875rem;">${item.expiry_date || '-'}</td>
+                                    <td>
+                                        ${importStatus && importStatus.success
+                                            ? '<span class="badge badge-success">✓ Imported</span>'
+                                            : importStatus && !importStatus.success
+                                                ? `<span class="badge badge-danger">✗ Failed</span>`
+                                                : '<span class="badge badge-secondary">Not imported</span>'
+                                        }
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        ocrResults.style.display = 'block';
+    }
+
     // Load import history on page load
-    document.addEventListener('DOMContentLoaded', loadImportHistory);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadImportHistory();
+        checkOCRStatus(); // Check OCR service status on load
+    });
 
     // Allow drag and drop
     const fileInput = document.getElementById('file-input');

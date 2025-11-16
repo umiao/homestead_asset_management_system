@@ -97,6 +97,17 @@
     #location-tree::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary, #999);
     }
+
+    /* Selected location highlight */
+    .tree-node.selected {
+        background-color: var(--primary-color, #0ea5e9) !important;
+        color: white !important;
+    }
+
+    .tree-node.selected .tree-count {
+        background-color: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
 </style>
 {% endblock %}
 
@@ -310,8 +321,14 @@
             // Display
             displayLocationTree(allLocations);
 
-            // Apply saved filters and sorting
-            searchItems();
+            // Restore location selection or apply filters
+            if (selectedLocationId) {
+                // Re-select the same location
+                selectLocation(selectedLocationId);
+            } else {
+                // Apply saved filters and sorting
+                searchItems();
+            }
 
         } catch (error) {
             console.error('Error loading inventory:', error);
@@ -375,10 +392,11 @@
         return nodes.map(node => {
             const itemCount = allItems.filter(item => item.location_id === node.id).length;
             const hasChildren = node.children && node.children.length > 0;
+            const isSelected = selectedLocationId === node.id;
 
             return `
                 <li class="tree-item">
-                    <div class="tree-node" onclick="selectLocation(${node.id})">
+                    <div class="tree-node ${isSelected ? 'selected' : ''}" onclick="selectLocation(${node.id})" data-location-id="${node.id}">
                         <span class="tree-icon">
                             <i data-lucide="${hasChildren ? 'folder' : 'folder-open'}" style="width: 18px; height: 18px;"></i>
                         </span>
@@ -391,15 +409,51 @@
         }).join('');
     }
 
+    function updateLocationHighlight() {
+        // Remove all previous selections
+        document.querySelectorAll('.tree-node').forEach(node => {
+            node.classList.remove('selected');
+        });
+
+        // Highlight the selected location
+        if (selectedLocationId) {
+            const selectedNode = document.querySelector(`.tree-node[data-location-id="${selectedLocationId}"]`);
+            if (selectedNode) {
+                selectedNode.classList.add('selected');
+            }
+        }
+    }
+
     function selectLocation(locationId) {
         selectedLocationId = locationId;
         const filtered = allItems.filter(item => item.location_id === locationId);
 
-        // Reset sort state on location change
-        sortState.acquired = null;
-        sortState.expiry = null;
+        // Apply saved sort state if any
+        const activeSortColumn = sortState.acquired ? 'acquired' : (sortState.expiry ? 'expiry' : null);
+        if (activeSortColumn) {
+            filtered.sort((a, b) => {
+                const dateA = activeSortColumn === 'acquired' ? a.acquired_date : a.expiry_date;
+                const dateB = activeSortColumn === 'acquired' ? b.acquired_date : b.expiry_date;
+
+                // Handle null dates (put them at the end)
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                const dateObjA = new Date(dateA);
+                const dateObjB = new Date(dateB);
+
+                if (sortState[activeSortColumn] === 'desc') {
+                    return dateObjB - dateObjA; // Newest first
+                } else {
+                    return dateObjA - dateObjB; // Oldest first
+                }
+            });
+        }
 
         displayItems(filtered);
+        updateSortIndicators();
+        updateLocationHighlight();
     }
 
     function searchItems() {
@@ -429,11 +483,31 @@
             filtered = filtered.filter(item => item.expiry_status === expiryStatus);
         }
 
-        // Reset sort state on new search
-        sortState.acquired = null;
-        sortState.expiry = null;
+        // Apply saved sort state if any
+        const activeSortColumn = sortState.acquired ? 'acquired' : (sortState.expiry ? 'expiry' : null);
+        if (activeSortColumn) {
+            filtered.sort((a, b) => {
+                const dateA = activeSortColumn === 'acquired' ? a.acquired_date : a.expiry_date;
+                const dateB = activeSortColumn === 'acquired' ? b.acquired_date : b.expiry_date;
+
+                // Handle null dates (put them at the end)
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                const dateObjA = new Date(dateA);
+                const dateObjB = new Date(dateB);
+
+                if (sortState[activeSortColumn] === 'desc') {
+                    return dateObjB - dateObjA; // Newest first
+                } else {
+                    return dateObjA - dateObjB; // Oldest first
+                }
+            });
+        }
 
         displayItems(filtered);
+        updateSortIndicators();
     }
 
     function displayItems(items) {

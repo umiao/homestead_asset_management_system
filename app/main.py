@@ -8,7 +8,7 @@ from pathlib import Path
 import json
 
 from .database import create_db_and_tables
-from .routers import inventory, import_data
+from .routers import inventory, import_data, receipt_ocr
 
 # Create FastAPI app
 app = FastAPI(
@@ -43,6 +43,7 @@ templates = Jinja2Templates(directory=str(templates_dir))
 # Include routers
 app.include_router(inventory.router)
 app.include_router(import_data.router)
+app.include_router(receipt_ocr.router)
 
 
 @app.on_event("startup")
