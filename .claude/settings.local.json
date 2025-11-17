@@ -18,7 +18,8 @@
       "Bash(python run_staging.py:*)",
       "Bash(python -m app.services.llm_ocr:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(exit 0)"
     ],
     "deny": [],
     "ask": []

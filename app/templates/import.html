@@ -468,6 +468,7 @@
     }
 
     let recognizedItems = [];  // Store recognized items globally
+    let currentReceiptInfo = null;  // Store current receipt file info
 
     async function uploadReceipt() {
         const fileInput = document.getElementById('receipt-input');
@@ -488,6 +489,9 @@
             const formData = new FormData();
             formData.append('file', file);
 
+            // Calculate file hash for duplicate detection
+            const fileHash = await calculateFileHash(file);
+
             // Don't auto-import, just recognize
             const response = await fetch(`/api/receipt/upload?auto_import=false`, {
                 method: 'POST',
@@ -495,6 +499,20 @@
             });
 
             if (!response.ok) {
+                const errorData = await response.json();
+                // Check if it's a duplicate
+                if (response.status === 409) {
+                    showMessage(
+                        `⚠️ ${errorData.message}\n\n` +
+                        `Previously imported ${errorData.existing_import.imported_count} items. ` +
+                        `Upload a different receipt or enable force re-import.`,
+                        'error'
+                    );
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = originalText;
+                    lucide.createIcons();
+                    return;
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -502,6 +520,13 @@
 
             if (result.success) {
                 recognizedItems = result.ocr_result.items;
+                // Store receipt info for import history
+                currentReceiptInfo = {
+                    file_hash: fileHash,
+                    file_path: result.file_path,
+                    filename: result.filename
+                };
+
                 showMessage(
                     `成功识别 ${result.ocr_result.items_found} 个物品！/ Successfully recognized ${result.ocr_result.items_found} items!`,
                     'success'
@@ -638,10 +663,31 @@
                     (failedCount > 0 ? ` (${failedCount} failed)` : ''),
                     successCount > 0 ? 'success' : 'error'
                 );
+
+                // Create import history record for OCR import
+                try {
+                    const historyData = {
+                        file_path: currentReceiptInfo?.file_path || "OCR_Import",
+                        file_name: currentReceiptInfo?.filename ? `OCR: ${currentReceiptInfo.filename}` : `OCR: Receipt scan ${new Date().toISOString()}`,
+                        file_hash: currentReceiptInfo?.file_hash,
+                        imported_count: successCount,
+                        error_count: failedCount,
+                        notes: `AI-powered receipt scan - ${recognizedItems.length} items recognized, ${successCount} imported`
+                    };
+                    await fetchAPI('/import/history', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(historyData)
+                    });
+                    loadImportHistory();  // Refresh import history
+                } catch (error) {
+                    console.error('Failed to create import history:', error);
+                }
             }
 
             closeOCREditModal();
             recognizedItems = [];
+            currentReceiptInfo = null;  // Clear receipt info
 
         } catch (error) {
             console.error('Error importing items:', error);

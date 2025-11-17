@@ -443,11 +443,22 @@
                 const dateObjA = new Date(dateA);
                 const dateObjB = new Date(dateB);
 
+                // Primary sort by the selected date column
+                let comparison = 0;
                 if (sortState[activeSortColumn] === 'desc') {
-                    return dateObjB - dateObjA; // Newest first
+                    comparison = dateObjB - dateObjA; // Newest first
                 } else {
-                    return dateObjA - dateObjB; // Oldest first
+                    comparison = dateObjA - dateObjB; // Oldest first
                 }
+
+                // If dates are equal, use updated_at as tie-breaker (most recently updated first)
+                if (comparison === 0) {
+                    const updatedA = new Date(a.updated_at || a.created_at);
+                    const updatedB = new Date(b.updated_at || b.created_at);
+                    return updatedB - updatedA; // Most recently updated first
+                }
+
+                return comparison;
             });
         }
 
@@ -498,11 +509,22 @@
                 const dateObjA = new Date(dateA);
                 const dateObjB = new Date(dateB);
 
+                // Primary sort by the selected date column
+                let comparison = 0;
                 if (sortState[activeSortColumn] === 'desc') {
-                    return dateObjB - dateObjA; // Newest first
+                    comparison = dateObjB - dateObjA; // Newest first
                 } else {
-                    return dateObjA - dateObjB; // Oldest first
+                    comparison = dateObjA - dateObjB; // Oldest first
                 }
+
+                // If dates are equal, use updated_at as tie-breaker (most recently updated first)
+                if (comparison === 0) {
+                    const updatedA = new Date(a.updated_at || a.created_at);
+                    const updatedB = new Date(b.updated_at || b.created_at);
+                    return updatedB - updatedA; // Most recently updated first
+                }
+
+                return comparison;
             });
         }
 
@@ -623,11 +645,22 @@
                 const dateObjA = new Date(dateA);
                 const dateObjB = new Date(dateB);
 
+                // Primary sort by the selected date column
+                let comparison = 0;
                 if (sortState[column] === 'desc') {
-                    return dateObjB - dateObjA; // Newest first
+                    comparison = dateObjB - dateObjA; // Newest first
                 } else {
-                    return dateObjA - dateObjB; // Oldest first
+                    comparison = dateObjA - dateObjB; // Oldest first
                 }
+
+                // If dates are equal, use updated_at as tie-breaker (most recently updated first)
+                if (comparison === 0) {
+                    const updatedA = new Date(a.updated_at || a.created_at);
+                    const updatedB = new Date(b.updated_at || b.created_at);
+                    return updatedB - updatedA; // Most recently updated first
+                }
+
+                return comparison;
             });
         }
 

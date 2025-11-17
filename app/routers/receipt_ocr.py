@@ -1,17 +1,18 @@
 """
 Router for receipt OCR and batch item import functionality.
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
-from sqlmodel import Session
+from sqlmodel import Session, select
 from pathlib import Path
 from datetime import datetime
 import shutil
 import uuid
+import hashlib
 
 from ..database import get_session
 from .. import crud
-from ..models import Item
+from ..models import Item, ImportHistory
 
 # Import OCR service with error handling
 try:
@@ -29,6 +30,15 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
+
+
+def calculate_file_hash(file_path: Path) -> str:
+    """Calculate SHA256 hash of file content."""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
 
 
 def get_ocr_service():
@@ -57,6 +67,7 @@ def get_ocr_service():
 async def upload_receipt(
     file: UploadFile = File(...),
     auto_import: bool = True,
+    force_reimport: bool = Query(default=False),
     session: Session = Depends(get_session)
 ):
     """
@@ -65,6 +76,7 @@ async def upload_receipt(
     Args:
         file: The image file to process
         auto_import: If True, automatically import items to inventory
+        force_reimport: If True, process even if receipt was already uploaded
         session: Database session
 
     Returns:
@@ -88,6 +100,36 @@ async def upload_receipt(
         # Save uploaded file
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+
+        # Calculate file hash to check for duplicates
+        file_hash = calculate_file_hash(file_path)
+
+        # Check if this receipt was already imported
+        if not force_reimport:
+            household = crud.get_or_create_household(session)
+            existing = session.exec(
+                select(ImportHistory)
+                .where(ImportHistory.file_hash == file_hash)
+                .where(ImportHistory.household_id == household.id)
+            ).first()
+
+            if existing:
+                # Delete the newly uploaded file since it's a duplicate
+                file_path.unlink()
+                return JSONResponse(
+                    status_code=409,
+                    content={
+                        "success": False,
+                        "error": "Duplicate receipt detected",
+                        "message": f"This receipt was already processed on {existing.created_at.strftime('%Y-%m-%d %H:%M')}",
+                        "existing_import": {
+                            "id": existing.id,
+                            "file_name": existing.file_name,
+                            "imported_count": existing.imported_count,
+                            "created_at": existing.created_at.isoformat()
+                        }
+                    }
+                )
 
         # Process with OCR
         ocr_service = get_ocr_service()
@@ -157,6 +199,23 @@ async def upload_receipt(
                         "item_name": item_data.get("name", "Unknown"),
                         "error": str(e)
                     })
+
+            # Create import history record
+            successful_count = sum(1 for r in import_results if r["success"])
+            failed_count = sum(1 for r in import_results if not r["success"])
+
+            import_history = ImportHistory(
+                file_path=str(file_path),
+                file_name=f"OCR: {filename}",
+                file_hash=file_hash,
+                imported_count=successful_count,
+                error_count=failed_count,
+                household_id=household.id,
+                notes=f"AI-powered receipt scan - {len(items_data)} items recognized"
+            )
+            session.add(import_history)
+            session.commit()
+            session.refresh(import_history)
 
         # Return results
         return {

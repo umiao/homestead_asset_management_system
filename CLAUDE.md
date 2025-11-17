@@ -227,4 +227,26 @@ expires_at = acquired_at + base_days - condition_adjustment
 * **Synthetic checks:** scheduled expiry → alert simulation.
 * **Observability:** OpenTelemetry + sampled logs.
 * **Audit trails** for all data access.
-* Use separate test db rather than the production DB.
+* **CRITICAL:** Use separate test db rather than the production DB.
+
+---
+
+## 14. Development Guidelines
+
+### **Database Environment**
+
+**CRITICAL: Always use staging database for testing and development**
+
+- **Production DB**: `data/pantrypilot.db` - Use ONLY for production operations
+- **Staging DB**: `data_staging/pantrypilot.db` - Use for ALL testing, development, and experimentation
+
+**Commands:**
+- **Development/Testing**: `python run_staging.py` (uses staging database)
+- **Production**: `python run.py` (uses production database)
+
+**Rules:**
+1. NEVER write test data to production database
+2. ALWAYS use `run_staging.py` for feature development and testing
+3. When testing new features (imports, OCR, inventory changes), use staging environment
+4. Production database should only contain real user data
+5. Before deploying changes, test thoroughly in staging environment first

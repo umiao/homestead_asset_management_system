@@ -299,6 +299,41 @@ def get_import_history(
     return history
 
 
+class CreateImportHistoryRequest(BaseModel):
+    """Request model for creating import history."""
+    file_path: str
+    file_name: str
+    file_hash: str | None = None
+    imported_count: int
+    error_count: int
+    notes: str | None = None
+
+
+@router.post("/history")
+def create_import_history(
+    request: CreateImportHistoryRequest,
+    household_id: int = Query(default=1),
+    session: Session = Depends(get_session)
+):
+    """Create an import history record."""
+    try:
+        import_history = ImportHistory(
+            file_path=request.file_path,
+            file_name=request.file_name,
+            file_hash=request.file_hash,
+            imported_count=request.imported_count,
+            error_count=request.error_count,
+            household_id=household_id,
+            notes=request.notes
+        )
+        session.add(import_history)
+        session.commit()
+        session.refresh(import_history)
+        return {"success": True, "id": import_history.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/check")
 def check_import_status(
     file_path: str,
