@@ -67,11 +67,56 @@
         <div class="spinner"></div>
     </div>
 </div>
+
+<!-- Delete/Checkout Modal -->
+<div id="delete-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: 2rem;">
+        <div class="card-header">
+            <h3 class="card-title">出库确认 / Checkout Confirmation</h3>
+            <button onclick="closeDeleteModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        <form id="delete-form" onsubmit="confirmDelete(event)">
+            <div id="delete-items-list" style="margin-bottom: 1rem; padding: 1rem; background-color: var(--light-bg); border-radius: 0.5rem;">
+                <!-- Item list will be populated here -->
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">出库原因 / Reason for Removal *</label>
+                <select id="delete-reason" class="form-select" required onchange="toggleCustomReason()">
+                    <option value="">请选择 / Please select</option>
+                    <option value="已消耗 / Consumed">已消耗 / Consumed</option>
+                    <option value="过期丢弃 / Expired">过期丢弃 / Expired</option>
+                    <option value="损坏 / Damaged">损坏 / Damaged</option>
+                    <option value="转移 / Transferred">转移 / Transferred</option>
+                    <option value="捐赠 / Donated">捐赠 / Donated</option>
+                    <option value="其他 / Other">其他 / Other</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="custom-reason-group" style="display: none;">
+                <label class="form-label">请说明 / Please specify</label>
+                <input type="text" id="custom-reason" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">出库记录 / Checkout Record (可选 / Optional)</label>
+                <textarea id="checkout-record" class="form-textarea" rows="3" placeholder="例如: 用于晚餐烹饪 / E.g., Used for dinner cooking"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary">取消 / Cancel</button>
+                <button type="submit" class="btn btn-danger">确认出库 / Confirm Checkout</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     let allLocations = [];
+    let allItems = [];
+    let itemToDelete = null; // Track item pending deletion
 
     async function loadAlerts() {
         try {
@@ -87,7 +132,7 @@
             const expiring = await fetchAPI(`/inventory/expiring?days=${days}`);
 
             // Load all items
-            const allItems = await fetchAPI('/inventory/items?limit=1000');
+            allItems = await fetchAPI('/inventory/items?limit=1000');
 
             // Calculate stats
             const expiring3 = allItems.filter(item => {
@@ -144,22 +189,22 @@
                             <th>Expired Date</th>
                             <th>Days Ago</th>
                             <th>Location</th>
-                            <th>Actions</th>
+                            <th class="actions-column">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${items.map(item => {
                             const location = allLocations.find(loc => loc.id === item.location_id);
                             return `
-                            <tr style="background-color: #fef2f2;">
+                            <tr class="hoverable-row" style="background-color: #fef2f2;">
                                 <td style="font-weight: 600; color: #991b1b;">⚠️ ${item.name}</td>
                                 <td>${item.category}</td>
                                 <td>${item.quantity} ${item.unit}</td>
                                 <td>${formatDate(item.expiry_date)}</td>
                                 <td style="color: #991b1b; font-weight: 600;">${item.days_until_expiry !== null ? Math.abs(item.days_until_expiry) : 'N/A'} days ago</td>
                                 <td style="font-size: 0.875rem;">${location ? location.full_path : 'Unknown'}</td>
-                                <td>
-                                    <button onclick="deleteExpiredItem(${item.id})" class="btn btn-danger btn-sm">Remove</button>
+                                <td class="action-buttons">
+                                    <button onclick="deleteExpiredItem(${item.id})" class="btn btn-danger btn-sm">Check Out</button>
                                 </td>
                             </tr>
                             `;
@@ -200,6 +245,7 @@
                             <th>Days Left</th>
                             <th>Location</th>
                             <th>Priority</th>
+                            <th class="actions-column">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -227,7 +273,7 @@
                             const location = allLocations.find(loc => loc.id === item.location_id);
 
                             return `
-                                <tr style="background-color: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fffbeb' : 'transparent'};">
+                                <tr class="hoverable-row" style="background-color: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fffbeb' : 'transparent'};">
                                     <td style="font-weight: 600;">${urgency === 'critical' ? '🚨 ' : ''}${item.name}</td>
                                     <td>${item.category}</td>
                                     <td>${item.quantity} ${item.unit}</td>
@@ -240,6 +286,10 @@
                                         <span class="badge" style="background-color: ${urgencyColor}; color: white;">
                                             ${urgencyLabel}
                                         </span>
+                                    </td>
+                                    <td class="action-buttons">
+                                        <button onclick="editExpiringItem(${item.id})" class="btn btn-primary btn-sm" style="margin-right: 0.5rem;">Edit</button>
+                                        <button onclick="deleteExpiringItem(${item.id})" class="btn btn-danger btn-sm">Check Out</button>
                                     </td>
                                 </tr>
                             `;
@@ -311,30 +361,165 @@
         container.innerHTML = table;
     }
 
-    async function deleteExpiredItem(itemId) {
-        if (!confirm('确认移除此过期物品？ / Remove this expired item from inventory?')) {
+    function deleteExpiredItem(itemId) {
+        // Find the item
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) {
+            showMessage('Item not found', 'error');
             return;
         }
 
+        itemToDelete = item;
+        showDeleteModal();
+
+        // Pre-select "Expired" as the reason
+        document.getElementById('delete-reason').value = '过期丢弃 / Expired';
+    }
+
+    async function editExpiringItem(itemId) {
+        // Redirect to inventory page with edit modal
+        window.location.href = `/inventory?edit=${itemId}`;
+    }
+
+    function deleteExpiringItem(itemId) {
+        // Find the item
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) {
+            showMessage('Item not found', 'error');
+            return;
+        }
+
+        itemToDelete = item;
+        showDeleteModal();
+    }
+
+    function showDeleteModal() {
+        const modal = document.getElementById('delete-modal');
+        const itemsList = document.getElementById('delete-items-list');
+
+        // Display item to be deleted
+        itemsList.innerHTML = `
+            <strong>待出库物品 / Item to Check Out:</strong>
+            <div style="margin-top: 0.5rem; border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.5rem;">
+                <div style="font-weight: 600;">${itemToDelete.name}</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    ${itemToDelete.quantity} ${itemToDelete.unit} - ${itemToDelete.category}
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('delete-modal');
+        modal.style.display = 'none';
+
+        // Reset form
+        document.getElementById('delete-form').reset();
+        document.getElementById('custom-reason-group').style.display = 'none';
+        itemToDelete = null;
+    }
+
+    function toggleCustomReason() {
+        const reasonSelect = document.getElementById('delete-reason');
+        const customReasonGroup = document.getElementById('custom-reason-group');
+        const customReasonInput = document.getElementById('custom-reason');
+
+        if (reasonSelect.value === '其他 / Other') {
+            customReasonGroup.style.display = 'block';
+            customReasonInput.required = true;
+        } else {
+            customReasonGroup.style.display = 'none';
+            customReasonInput.required = false;
+        }
+    }
+
+    async function confirmDelete(event) {
+        event.preventDefault();
+
+        const reasonSelect = document.getElementById('delete-reason');
+        const customReason = document.getElementById('custom-reason').value;
+        const checkoutRecord = document.getElementById('checkout-record').value;
+
+        // Get final reason
+        let reason = reasonSelect.value;
+        if (reason === '其他 / Other' && customReason) {
+            reason = customReason;
+        }
+
         try {
-            await fetchAPI(`/inventory/items/${itemId}`, {
+            await fetchAPI(`/inventory/items/${itemToDelete.id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    reason: '过期丢弃 / Expired',
-                    checkout_record: '从过期警报页面移除 / Removed from expiration alerts page'
+                    reason: reason,
+                    checkout_record: checkoutRecord
                 })
             });
 
-            showMessage('过期物品已移除 / Expired item removed successfully', 'success');
-            loadAlerts();
+            closeDeleteModal();
+            showMessage('物品已出库并记录 / Item checked out and logged', 'success');
+            await loadAlerts();
         } catch (error) {
-            console.error('Error deleting item:', error);
-            showMessage('删除失败 / Error deleting item', 'error');
+            console.error('Error checking out item:', error);
+            showMessage('出库失败 / Error checking out item', 'error');
         }
     }
 
     // Load alerts on page load
     document.addEventListener('DOMContentLoaded', loadAlerts);
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
 </script>
+
+<style>
+    /* Hide Actions column by default */
+    .table th.actions-column,
+    .table td.action-buttons {
+        display: none;
+        white-space: nowrap;
+        padding: 0.75rem;
+    }
+
+    /* Show Actions column when hovering over the table */
+    .table:hover th.actions-column,
+    .table:hover td.action-buttons {
+        display: table-cell;
+    }
+
+    /* Hide button content by default but keep the cell interactive */
+    .action-buttons .btn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+
+    /* Show buttons when hovering over the entire row */
+    .hoverable-row:hover .action-buttons .btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Smooth row hover effect */
+    .hoverable-row {
+        transition: background-color 0.2s ease;
+    }
+
+    .hoverable-row:hover {
+        background-color: rgba(59, 130, 246, 0.05) !important;
+    }
+
+    /* Button hover effect */
+    .action-buttons .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
 {% endblock %}

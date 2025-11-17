@@ -568,7 +568,7 @@
                             <th class="sortable" onclick="sortByDate('acquired')" id="acquired-header">Acquired</th>
                             <th class="sortable" onclick="sortByDate('expiry')" id="expiry-header">Expiry</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th class="actions-column">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -580,7 +580,7 @@
                                 ? 'font-weight: 600; cursor: help; text-decoration: underline dotted; text-decoration-color: var(--border-color);'
                                 : 'font-weight: 600;';
                             return `
-                                <tr>
+                                <tr class="hoverable-row">
                                     <td>
                                         <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="updateSelectedCount()">
                                     </td>
@@ -597,7 +597,7 @@
                                             ${getExpiryLabel(item.expiry_status)}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="action-buttons">
                                         <button onclick="editItem(${item.id})" class="btn btn-primary btn-sm" style="margin-right: 0.5rem;">Edit</button>
                                         <button onclick="deleteItem(${item.id})" class="btn btn-danger btn-sm">Delete</button>
                                     </td>
@@ -957,12 +957,20 @@
         document.getElementById('category-filter').addEventListener('change', searchItems);
         document.getElementById('expiry-filter').addEventListener('change', searchItems);
 
-        // Check if we should open add item modal
+        // Check if we should open add item modal or edit item modal
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'add') {
             showAddModal();
             // Remove the query parameter from URL without refreshing
             window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (urlParams.get('edit')) {
+            const itemId = parseInt(urlParams.get('edit'));
+            if (itemId) {
+                // Wait for items to load, then open edit modal
+                setTimeout(() => editItem(itemId), 500);
+                // Remove the query parameter from URL without refreshing
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         }
     });
 
@@ -974,4 +982,49 @@
         }
     });
 </script>
+
+<style>
+    /* Hide Actions column by default */
+    .table th.actions-column,
+    .table td.action-buttons {
+        display: none;
+        white-space: nowrap;
+        padding: 0.75rem;
+    }
+
+    /* Show Actions column when hovering over the table */
+    .table:hover th.actions-column,
+    .table:hover td.action-buttons {
+        display: table-cell;
+    }
+
+    /* Hide button content by default but keep the cell interactive */
+    .action-buttons .btn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+
+    /* Show buttons when hovering over the entire row */
+    .hoverable-row:hover .action-buttons .btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Smooth row hover effect */
+    .hoverable-row {
+        transition: background-color 0.2s ease;
+    }
+
+    .hoverable-row:hover {
+        background-color: rgba(59, 130, 246, 0.05) !important;
+    }
+
+    /* Button hover effect */
+    .action-buttons .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
 {% endblock %}
