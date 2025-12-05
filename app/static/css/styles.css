@@ -58,10 +58,19 @@ body {
                  'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC',
                  'Source Han Sans CN', sans-serif;
     background-color: var(--light-bg);
-    background-image: url('/static/images/bg-hexagon-network.png');
+    /* Mobile-first: Use CSS gradient background (better performance, iOS compatible) */
+    background-image:
+        linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%),
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            rgba(226, 232, 240, 0.4) 35px,
+            rgba(226, 232, 240, 0.4) 70px
+        );
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    background-attachment: scroll; /* Mobile compatible (iOS Safari supports scroll, not fixed) */
     background-repeat: no-repeat;
     color: var(--text-primary);
     line-height: 1.6;
@@ -690,6 +699,15 @@ main {
 }
 
 /* Responsive */
+
+/* Desktop - Restore image background with fixed attachment */
+@media (min-width: 1024px) {
+    body {
+        background-image: url('/static/images/bg-hexagon-network.png');
+        background-attachment: fixed; /* Desktop browsers support fixed */
+    }
+}
+
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;

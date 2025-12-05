@@ -146,9 +146,9 @@
 </div>
 
 <!-- Two Column Layout -->
-<div style="display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem;">
+<div class="inventory-layout">
     <!-- Location Hierarchy Sidebar -->
-    <div class="card" style="height: fit-content; position: sticky; top: 100px;">
+    <div class="card location-sidebar">
         <div class="card-header">
             <h3 class="card-title">Locations</h3>
         </div>
@@ -158,7 +158,7 @@
     </div>
 
     <!-- Items List -->
-    <div class="card">
+    <div class="card items-main">
         <div class="card-header">
             <h3 class="card-title">Items</h3>
             <span id="item-count" style="color: var(--text-secondary);">0 items</span>
@@ -1006,6 +1006,9 @@
 
 <!-- Autocomplete functionality -->
 <script src="/static/js/autocomplete.js"></script>
+
+<!-- Mobile card view -->
+<script src="/static/js/mobile-cards.js"></script>
 
 <style>
     /* Hide Actions column by default */
