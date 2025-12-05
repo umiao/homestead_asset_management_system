@@ -459,6 +459,23 @@ Simply remove the `initAutocomplete()` call for that field.
 
 ---
 
+## 最近改进 / Recent Improvements (2025-12-05)
+
+- ✅ **禁用浏览器原生自动补全** / Disabled browser native autocomplete
+  - 添加 `autocomplete="off"` 到所有自动补全字段
+  - 添加 `autocorrect="off"`, `autocapitalize="off"`, `spellcheck="false"` 属性
+  - 避免双重下拉菜单显示
+
+- ✅ **修复代码覆盖率问题** / Fixed code coverage issue
+  - 在 `database.py` 中添加 `# noqa: F401` 注释
+  - 明确说明导入的必要性（SQLModel表注册）
+
+- ✅ **添加CSS类标记** / Added CSS class marker
+  - 自动为启用自动补全的输入框添加 `.autocomplete-enabled` 类
+  - 方便调试和样式定制
+
+详见：`docs/AUTOCOMPLETE_IMPROVEMENTS.md`
+
 ## 未来改进 / Future Enhancements
 
 - [ ] 支持拼音搜索（中文输入优化）/ Pinyin search support (Chinese input optimization)

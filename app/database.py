@@ -42,8 +42,9 @@ engine = create_engine(
 def create_db_and_tables():
     """Create database tables."""
     # Import models to ensure they're registered with SQLModel
-    from app.models import Household, Location, Item, Event
-    from app.services.autocomplete_cache import AutocompleteCache
+    # These imports are intentionally not unused - they register table models
+    from app.models import Household, Location, Item, Event  # noqa: F401
+    from app.services.autocomplete_cache import AutocompleteCache  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
 

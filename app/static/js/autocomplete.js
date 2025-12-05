@@ -27,6 +27,13 @@ class AutocompleteInput {
     }
 
     init() {
+        // Mark input as autocomplete-enabled
+        this.input.classList.add('autocomplete-enabled');
+        this.input.setAttribute('autocomplete', 'off');
+        this.input.setAttribute('autocorrect', 'off');
+        this.input.setAttribute('autocapitalize', 'off');
+        this.input.setAttribute('spellcheck', 'false');
+
         // Create dropdown container
         this.dropdown = document.createElement('div');
         this.dropdown.className = 'autocomplete-dropdown';

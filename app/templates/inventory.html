@@ -184,8 +184,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Category *</label>
-                    <input type="text" id="item-category" class="form-input" list="category-list" required>
-                    <datalist id="category-list"></datalist>
+                    <input type="text" id="item-category" class="form-input" autocomplete="off" required>
                 </div>
             </div>
 
@@ -196,13 +195,13 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Unit *</label>
-                    <input type="text" id="item-unit" class="form-input" placeholder="e.g., count, kg, liter" required>
+                    <input type="text" id="item-unit" class="form-input" autocomplete="off" placeholder="e.g., count, kg, liter" required>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Location Path *</label>
-                <input type="text" id="item-location" class="form-input" placeholder="e.g., Kitchen > Fridge > Top Shelf" required>
+                <input type="text" id="item-location" class="form-input" autocomplete="off" placeholder="e.g., Kitchen > Fridge > Top Shelf" required>
             </div>
 
             <div class="form-row">
@@ -302,7 +301,7 @@
             // Load categories
             const categories = await fetchAPI('/inventory/categories');
             populateCategoryFilter(categories);
-            populateCategoryDatalist(categories);
+            // Note: Category datalist removed - now using LFU autocomplete
 
             // Restore filter state to UI
             document.getElementById('search-input').value = filterState.query;
@@ -337,14 +336,7 @@
         });
     }
 
-    function populateCategoryDatalist(categories) {
-        const datalist = document.getElementById('category-list');
-        categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            datalist.appendChild(option);
-        });
-    }
+    // populateCategoryDatalist() removed - replaced by LFU autocomplete
 
     function displayLocationTree(locations) {
         const container = document.getElementById('location-tree');
@@ -679,6 +671,9 @@
         }
     }
 
+    // Track if autocomplete has been initialized
+    let autocompleteInitialized = false;
+
     function showAddModal() {
         editingItemId = null;
         document.getElementById('item-modal').style.display = 'flex';
@@ -687,6 +682,12 @@
 
         // Set default acquired date to today
         document.getElementById('item-acquired').valueAsDate = new Date();
+
+        // Initialize autocomplete on first modal open
+        if (!autocompleteInitialized && typeof initAutocomplete === 'function') {
+            initializeAutocomplete();
+            autocompleteInitialized = true;
+        }
     }
 
     function editItem(itemId) {
@@ -936,8 +937,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadInventory();
 
-        // Initialize autocomplete for form fields
-        initializeAutocomplete();
+        // Note: Autocomplete will be initialized when modal is first opened
+        // See showAddModal() function
 
         // Add Enter key support for search
         const searchInput = document.getElementById('search-input');
