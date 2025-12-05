@@ -238,11 +238,18 @@ expires_at = acquired_at + base_days - condition_adjustment
 **CRITICAL: Always use staging database for testing and development**
 
 - **Production DB**: `data/pantrypilot.db` - Use ONLY for production operations
-- **Staging DB**: `data_staging/pantrypilot.db` - Use for ALL testing, development, and experimentation
+- **Staging DB**: `data/pantrypilot_staging.db` - Use for ALL testing, development, and experimentation
 
 **Commands:**
-- **Development/Testing**: `python run_staging.py` (uses staging database)
-- **Production**: `python run.py` (uses production database)
+- **Development/Testing**: `python run_staging.py` (uses staging database, **port 8001**)
+- **Production**: `python run.py` (uses production database, **port 8000**)
+
+**URLs:**
+- **Production**: http://localhost:8000 (165 items, production data)
+- **Staging**: http://localhost:8001 (146 items, test data)
+
+**Port Separation:**
+Staging runs on port 8001 (different from production port 8000) to ensure proper environment isolation and prevent accidental access to production data.
 
 **Rules:**
 1. NEVER write test data to production database
@@ -250,3 +257,4 @@ expires_at = acquired_at + base_days - condition_adjustment
 3. When testing new features (imports, OCR, inventory changes), use staging environment
 4. Production database should only contain real user data
 5. Before deploying changes, test thoroughly in staging environment first
+6. Verify port number: 8000 = Production, 8001 = Staging

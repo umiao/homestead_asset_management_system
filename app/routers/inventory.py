@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import logging
 import os
 
-from ..database import get_session
+from ..database import get_session, ENVIRONMENT
 from ..models import Item, Event
 from .. import crud
 from ..services.autocomplete_cache import LFUAutocompleteService
@@ -15,19 +15,28 @@ from ..services.autocomplete_cache import LFUAutocompleteService
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 # Setup logging for deletions
+# Environment-based log separation
 log_dir = "logs"
 os.makedirs(log_dir, exist_ok=True)
-deletion_logger = logging.getLogger("inventory_deletions")
+
+# Use different log file based on environment
+# Production: logs/item_deletions.log
+# Staging: logs/item_deletions_staging.log
+if ENVIRONMENT == 'staging':
+    log_file = os.path.join(log_dir, "item_deletions_staging.log")
+else:
+    log_file = os.path.join(log_dir, "item_deletions.log")
+
+deletion_logger = logging.getLogger(f"inventory_deletions_{ENVIRONMENT}")
 deletion_logger.setLevel(logging.INFO)
 
 # Create file handler
-log_file = os.path.join(log_dir, "item_deletions.log")
 file_handler = logging.FileHandler(log_file, encoding='utf-8')
 file_handler.setLevel(logging.INFO)
 
-# Create formatter
+# Create formatter - include environment in log messages
 formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s',
+    f'%(asctime)s - [{ENVIRONMENT.upper()}] - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 file_handler.setFormatter(formatter)
