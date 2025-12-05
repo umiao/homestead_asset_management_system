@@ -10,6 +10,7 @@ import os
 from ..database import get_session
 from ..models import Item, Event
 from .. import crud
+from ..services.autocomplete_cache import LFUAutocompleteService
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -150,6 +151,9 @@ def create_item(
 
     created_items = []
 
+    # Initialize autocomplete service
+    autocomplete_service = LFUAutocompleteService(session, household.id)
+
     # Create item(s)
     for name in names:
         item = Item(
@@ -165,6 +169,14 @@ def create_item(
         )
         created_item = crud.create_item(session, item)
         created_items.append(created_item)
+
+    # Record usage in autocomplete cache
+    if item_data.get("category"):
+        autocomplete_service.record_usage("category", item_data.get("category"))
+    if location_path:
+        autocomplete_service.record_usage("location_path", location_path)
+    if item_data.get("unit"):
+        autocomplete_service.record_usage("unit", item_data.get("unit"))
 
     # Return single item or list based on input
     if len(created_items) == 1:

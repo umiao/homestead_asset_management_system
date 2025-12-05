@@ -7,8 +7,8 @@ Rules:
 - name: Item name should be translate to Chinese.
 - category: Use Chinese categories (食品, 日用品, 清洁用品, etc.) Map all food related categories into 食品.
 - location_path: Use Chinese hierarchical paths (冰箱 > 冷藏, 冰箱 > 冷冻, 厨房 > 橱柜, etc.)
-- acquired_date: Extract from receipt date (format: YYYY-MM-DD)
-- expiry_date: Infer based on category (Meat: +2 days, Produce: +5 days, Dairy: +7 days, Frozen: +90 days, Non-food: +3650 days/10 years)
+- acquired_date: Extract from receipt date (format: YYYY-MM-DD). Sanity check to do: the acquired date is less likely to be far apart from today, and should be within this year.
+- expiry_date: Infer based on category (Meat: +2 days, Produce: +5 days, Dairy: +7 days, Frozen: +90 days, Non-food: +3650 days/10 years) from now.
 - notes: Include store name (e.g., "Costco购入") and prices
 - Exclude: taxes, fees, payment info, subtotals
 - Tips: KSWTR is Kirkland drinking water. CA REDEMP VA should be NOT included as an item.

@@ -19,7 +19,8 @@
       "Bash(python -m app.services.llm_ocr:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(exit 0)"
+      "Bash(exit 0)",
+      "Bash(powershell -Command \"(Get-Content ''C:\\Users\\Shenghui Xu\\Desktop\\Gen_AI_Proj\\homestead_asset_management_system\\app\\templates\\inventory.html'' | Measure-Object -Line).Lines\")"
     ],
     "deny": [],
     "ask": []

@@ -3,6 +3,7 @@
 {% block title %}Inventory - PantryPilot{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="/static/css/autocomplete.css">
 <style>
     /* Hide checkboxes by default */
     .table tbody td:first-child {
@@ -195,17 +196,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Unit *</label>
-                    <select id="item-unit" class="form-select" required>
-                        <option value="count">count</option>
-                        <option value="kg">kg</option>
-                        <option value="g">g</option>
-                        <option value="liter">liter</option>
-                        <option value="ml">ml</option>
-                        <option value="piece">piece</option>
-                        <option value="bottle">bottle</option>
-                        <option value="can">can</option>
-                        <option value="box">box</option>
-                    </select>
+                    <input type="text" id="item-unit" class="form-input" placeholder="e.g., count, kg, liter" required>
                 </div>
             </div>
 
@@ -945,6 +936,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadInventory();
 
+        // Initialize autocomplete for form fields
+        initializeAutocomplete();
+
         // Add Enter key support for search
         const searchInput = document.getElementById('search-input');
         searchInput.addEventListener('keypress', (e) => {
@@ -974,6 +968,32 @@
         }
     });
 
+    /**
+     * Initialize autocomplete for Add Item form fields
+     */
+    function initializeAutocomplete() {
+        // Initialize autocomplete for Category field
+        initAutocomplete('item-category', 'category', {
+            minChars: 0,
+            maxSuggestions: 10,
+            debounceMs: 150
+        });
+
+        // Initialize autocomplete for Location Path field
+        initAutocomplete('item-location', 'location_path', {
+            minChars: 0,
+            maxSuggestions: 10,
+            debounceMs: 150
+        });
+
+        // Initialize autocomplete for Unit field
+        initAutocomplete('item-unit', 'unit', {
+            minChars: 0,
+            maxSuggestions: 8,
+            debounceMs: 100
+        });
+    }
+
     // Close modals on escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -982,6 +1002,9 @@
         }
     });
 </script>
+
+<!-- Autocomplete functionality -->
+<script src="/static/js/autocomplete.js"></script>
 
 <style>
     /* Hide Actions column by default */
