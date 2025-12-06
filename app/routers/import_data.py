@@ -12,6 +12,7 @@ import hashlib
 from ..database import get_session
 from ..models import Item, ImportHistory
 from .. import crud
+from ..auth import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -104,7 +105,8 @@ async def import_tsv(
     file: UploadFile = File(...),
     file_hash: str = None,
     household_id: int = 1,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("import"))  # Only admin can import
 ):
     """Import inventory from TSV file."""
     if not file.filename.endswith(('.tsv', '.csv', '.txt')):
@@ -198,7 +200,8 @@ async def import_tsv(
 @router.post("/tsv/file-path")
 def import_tsv_from_path(
     request: ImportFileRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("import"))  # Only admin can import
 ):
     """Import inventory from TSV file path (for local files)."""
     file_path = request.file_path
@@ -289,7 +292,8 @@ def import_tsv_from_path(
 @router.get("/history")
 def get_import_history(
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """Get import history."""
     statement = select(ImportHistory).where(
@@ -313,7 +317,8 @@ class CreateImportHistoryRequest(BaseModel):
 def create_import_history(
     request: CreateImportHistoryRequest,
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("import"))  # Only admin can create
 ):
     """Create an import history record."""
     try:
@@ -338,7 +343,8 @@ def create_import_history(
 def check_import_status(
     file_path: str,
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can check
 ):
     """Check if file has been imported before using file hash."""
     # Calculate hash of the file
@@ -375,7 +381,8 @@ def check_import_status(
 def check_import_status_by_hash(
     file_hash: str,
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can check
 ):
     """Check if file hash has been imported before (for uploaded files)."""
     statement = select(ImportHistory).where(

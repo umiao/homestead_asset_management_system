@@ -41,6 +41,17 @@
                         Alerts
                     </a>
                 </nav>
+                <div class="user-menu">
+                    <div class="user-badge">
+                        <i data-lucide="user" class="icon-sm"></i>
+                        <span class="user-name">{{ user.username }}</span>
+                        <span class="user-role badge-role-{{ user.role }}">{{ user.role }}</span>
+                    </div>
+                    <a href="/logout" class="btn-logout" title="Logout">
+                        <i data-lucide="log-out" class="icon-sm"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
             </div>
         </div>
     </header>

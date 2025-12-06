@@ -11,6 +11,7 @@ from ..database import get_session, ENVIRONMENT
 from ..models import Item, Event
 from .. import crud
 from ..services.autocomplete_cache import LFUAutocompleteService
+from ..auth import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -54,7 +55,8 @@ def list_items(
     household_id: int = Query(default=1),
     skip: int = 0,
     limit: int = 100,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """List all inventory items with computed fields."""
     items = crud.get_all_items(session, household_id, skip, limit)
@@ -76,6 +78,7 @@ def search_items(
     category: Optional[str] = None,
     location_id: Optional[int] = None,
     expiry_status: Optional[str] = None,
+    user: dict = Depends(get_current_user),  # All authenticated users can search
     session: Session = Depends(get_session)
 ):
     """Search items with filters and computed fields."""
@@ -99,7 +102,11 @@ def search_items(
 
 
 @router.get("/items/{item_id}")
-def get_item(item_id: int, session: Session = Depends(get_session)):
+def get_item(
+    item_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
+):
     """Get item by ID with computed fields."""
     item = crud.get_item(session, item_id)
     if not item:
@@ -115,7 +122,8 @@ def get_item(item_id: int, session: Session = Depends(get_session)):
 @router.post("/items")
 def create_item(
     item_data: dict = Body(...),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("write"))  # Only admin can create
 ):
     """Create new inventory item(s). Supports comma-separated names for bulk creation."""
     # Get or create household
@@ -217,7 +225,8 @@ def create_item(
 def update_item(
     item_id: int,
     updates: dict,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("write"))  # Only admin can update
 ):
     """Update item."""
     # Handle location_path if provided
@@ -251,7 +260,8 @@ def update_item(
 def delete_item(
     item_id: int,
     delete_request: DeleteItemRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("delete"))  # Only admin can delete
 ):
     """Delete item with reason and logging."""
     # Get item details before deletion
@@ -302,7 +312,8 @@ def delete_item(
 def get_expiring_items(
     household_id: int = Query(default=1),
     days: int = Query(default=7),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """Get items expiring within specified days with computed fields."""
     items = crud.get_expiring_items(session, household_id, days)
@@ -320,7 +331,8 @@ def get_expiring_items(
 @router.get("/expired")
 def get_expired_items(
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """Get expired items with computed fields."""
     items = crud.get_expired_items(session, household_id)
@@ -338,7 +350,8 @@ def get_expired_items(
 @router.get("/categories")
 def get_categories(
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """Get all categories."""
     return crud.get_categories(session, household_id)
@@ -347,7 +360,8 @@ def get_categories(
 @router.get("/locations")
 def get_locations(
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users can read
 ):
     """Get location hierarchy."""
     locations = crud.get_location_hierarchy(session, household_id)

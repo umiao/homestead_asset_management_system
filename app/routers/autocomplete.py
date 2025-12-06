@@ -12,6 +12,7 @@ from sqlmodel import Session
 from typing import List, Dict, Optional
 from app.database import get_session
 from app.services.autocomplete_cache import LFUAutocompleteService
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/autocomplete", tags=["autocomplete"])
 
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/autocomplete", tags=["autocomplete"])
 def get_autocomplete_suggestions(
     field_type: str,
     query: str = Query(default="", description="Search query to filter suggestions"),
+    user: dict = Depends(get_current_user),  # All authenticated users
     limit: int = Query(default=10, ge=1, le=50, description="Maximum number of suggestions"),
     household_id: int = Query(default=1),
     session: Session = Depends(get_session)
@@ -70,6 +72,7 @@ def get_autocomplete_suggestions(
 def get_simple_suggestions(
     field_type: str,
     limit: int = Query(default=10, ge=1, le=50),
+    user: dict = Depends(get_current_user),  # All authenticated users
     household_id: int = Query(default=1),
     session: Session = Depends(get_session)
 ) -> List[str]:
@@ -104,6 +107,7 @@ def get_simple_suggestions(
 def record_field_usage(
     field_type: str = Query(..., description="Type of field used"),
     value: str = Query(..., description="Value that was used"),
+    user: dict = Depends(get_current_user),  # All authenticated users
     household_id: int = Query(default=1),
     session: Session = Depends(get_session)
 ) -> Dict:
@@ -145,6 +149,7 @@ def record_field_usage(
 def get_cache_statistics(
     field_type: Optional[str] = Query(default=None, description="Optional field type filter"),
     household_id: int = Query(default=1),
+    user: dict = Depends(get_current_user),  # All authenticated users
     session: Session = Depends(get_session)
 ) -> Dict:
     """
@@ -186,7 +191,8 @@ def get_cache_statistics(
 @router.post("/initialize")
 def initialize_cache_from_data(
     household_id: int = Query(default=1),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # All authenticated users
 ) -> Dict:
     """
     Initialize autocomplete cache from existing inventory data.
@@ -233,6 +239,7 @@ def initialize_cache_from_data(
 def cleanup_cache(
     field_type: Optional[str] = Query(default=None, description="Optional field type to clean"),
     household_id: int = Query(default=1),
+    user: dict = Depends(get_current_user),  # All authenticated users
     session: Session = Depends(get_session)
 ) -> Dict:
     """

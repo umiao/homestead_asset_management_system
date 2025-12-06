@@ -13,6 +13,7 @@ import hashlib
 from ..database import get_session
 from .. import crud
 from ..models import Item, ImportHistory
+from ..auth import get_current_user, require_permission
 
 # Import OCR service with error handling
 try:
@@ -68,7 +69,8 @@ async def upload_receipt(
     file: UploadFile = File(...),
     auto_import: bool = True,
     force_reimport: bool = Query(default=False),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_permission("import"))  # Only admin can upload receipts
 ):
     """
     Upload and process a receipt or product image.
@@ -247,7 +249,9 @@ async def upload_receipt(
 
 
 @router.get("/status")
-async def get_ocr_status():
+async def get_ocr_status(
+    user: dict = Depends(get_current_user)  # All authenticated users can check status
+):
     """Check if OCR service is available and configured."""
     if not OCR_SERVICE_AVAILABLE:
         return {
@@ -281,7 +285,9 @@ async def get_ocr_status():
 
 
 @router.get("/history")
-async def get_receipt_history():
+async def get_receipt_history(
+    user: dict = Depends(get_current_user)  # All authenticated users can view history
+):
     """Get list of uploaded receipt files."""
     try:
         receipts = []
