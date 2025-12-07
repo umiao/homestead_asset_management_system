@@ -34,38 +34,27 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 
 
-def parse_flexible_date(date_str: Optional[str]) -> Optional[date]:
+def parse_iso_date(date_str: Optional[str]) -> Optional[date]:
     """
-    Parse date from various formats (YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, etc.)
+    Parse date in ISO format YYYY-MM-DD only.
+
+    This avoids ambiguity (e.g., 01/02/2025 could be Jan 2 or Feb 1).
+    The LLM is instructed to always output dates in ISO format.
 
     Args:
-        date_str: Date string in various formats
+        date_str: Date string in ISO format YYYY-MM-DD
 
     Returns:
-        date object or None if parsing fails
+        date object or None if parsing fails or input is null
     """
     if not date_str or date_str == "null":
         return None
 
-    # Try common date formats
-    date_formats = [
-        "%Y-%m-%d",      # 2025-01-15 (ISO format, preferred)
-        "%d/%m/%Y",      # 15/01/2025 (European format)
-        "%m/%d/%Y",      # 01/15/2025 (US format)
-        "%Y/%m/%d",      # 2025/01/15
-        "%d-%m-%Y",      # 15-01-2025
-        "%m-%d-%Y",      # 01-15-2025
-    ]
-
-    for fmt in date_formats:
-        try:
-            return datetime.strptime(date_str, fmt).date()
-        except ValueError:
-            continue
-
-    # If all formats fail, log warning and return None
-    print(f"Warning: Could not parse date '{date_str}' with any known format")
-    return None
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError as e:
+        print(f"Warning: Could not parse date '{date_str}' - expected ISO format YYYY-MM-DD. Error: {e}")
+        return None
 
 
 def calculate_file_hash(file_path: Path) -> str:
@@ -201,14 +190,14 @@ async def upload_receipt(
                         session, location_path, household.id
                     )
 
-                    # Parse dates using flexible parser
+                    # Parse dates in ISO format only (YYYY-MM-DD)
                     acquired_date = None
                     if item_data.get("acquired_date"):
-                        acquired_date = parse_flexible_date(item_data.get("acquired_date"))
+                        acquired_date = parse_iso_date(item_data.get("acquired_date"))
 
                     expiry_date = None
                     if item_data.get("expiry_date"):
-                        expiry_date = parse_flexible_date(item_data.get("expiry_date"))
+                        expiry_date = parse_iso_date(item_data.get("expiry_date"))
 
                     # Create item
                     item = Item(
