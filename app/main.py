@@ -1,4 +1,4 @@
-"""PantryPilot - Main FastAPI application."""
+"""家庭资产盘存系统 - Main FastAPI application."""
 from fastapi import FastAPI, Request, Form, Response, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -14,7 +14,7 @@ from .auth import authenticate_user, create_session_cookie, get_current_user, ge
 
 # Create FastAPI app
 app = FastAPI(
-    title="PantryPilot",
+    title="家庭资产盘存系统",
     description="Household Asset Management System",
     version="1.0.0"
 )
@@ -82,7 +82,7 @@ async def alerts_page(request: Request, user: dict = Depends(get_current_user_or
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "PantryPilot"}
+    return {"status": "healthy", "service": "家庭资产盘存系统"}
 
 
 # HTTP Basic security for login

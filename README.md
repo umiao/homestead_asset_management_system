@@ -1,4 +1,4 @@
-# PantryPilot - Household Asset Management System
+# 家庭资产盘存系统 (Household Asset Management System)
 
 A modern, intelligent inventory management system for household items, food, tools, and supplies. Track what you have, where it is, and when it expires.
 

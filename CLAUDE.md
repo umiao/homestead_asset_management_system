@@ -1,13 +1,13 @@
-Below is the updated and professionalized version of your **PantryPilot PRD**, rewritten in English and formatted to follow **good practices for a `CLAUDE.md`-style document** (concise, well-structured, technically actionable, and implementation-oriented).
+Below is the updated and professionalized version of the **家庭资产盘存系统 (Household Asset Management System) PRD**, rewritten in English and formatted to follow **good practices for a `CLAUDE.md`-style document** (concise, well-structured, technically actionable, and implementation-oriented).
 It keeps all original details but improves readability, hierarchy, and engineering clarity.
 
 ---
 
-# **PantryPilot — Product Requirement & Technical Design Document (V1 → V2 Blueprint)**
+# **家庭资产盘存系统 (Household Asset Management System) — Product Requirement & Technical Design Document (V1 → V2 Blueprint)**
 
 ## 1. Overview
 
-**Codename:** PantryPilot
+**Project Name:** 家庭资产盘存系统 (Household Asset Management System)
 **Goal:** Manage the full lifecycle of household inventory — including items, tools, and miscellaneous supplies — through **ingestion, tracking, expiration management, and intelligent querying**.
 
 ### **Key Features**
@@ -238,7 +238,7 @@ expires_at = acquired_at + base_days - condition_adjustment
 **CRITICAL: Always use staging database for testing and development**
 
 - **Production DB**: `data/pantrypilot.db` - Use ONLY for production operations
-- **Staging DB**: `data/pantrypilot_staging.db` - Use for ALL testing, development, and experimentation
+- **Staging DB**: `data_staging/pantrypilot.db` - Use for ALL testing, development, and experimentation
 
 **Commands:**
 - **Development/Testing**: `python run_staging.py` (uses staging database, **port 8001**)

@@ -5,6 +5,15 @@ from datetime import date, timedelta
 from .models import Household, Location, Item, Event
 
 
+# Food-related categories (consistent with models.py)
+FOOD_CATEGORIES = ["食物", "food", "Food", "食品", "饮料", "Drink", "drinks"]
+
+
+def is_food_item(item: Item) -> bool:
+    """Check if an item is food-related."""
+    return item.category in FOOD_CATEGORIES or item.category.lower() in [c.lower() for c in FOOD_CATEGORIES]
+
+
 def get_or_create_household(session: Session, name: str = "My Home") -> Household:
     """Get or create default household."""
     statement = select(Household).where(Household.name == name)
@@ -186,25 +195,32 @@ def get_expiring_items(
     household_id: int,
     days: int = 7
 ) -> List[Item]:
-    """Get items expiring within specified days."""
+    """Get food items expiring within specified days (non-food items excluded)."""
     target_date = date.today() + timedelta(days=days)
+
     statement = select(Item).where(
         Item.household_id == household_id,
         Item.expiry_date.isnot(None),
         Item.expiry_date <= target_date,
         Item.expiry_date >= date.today()
     )
-    return list(session.exec(statement).all())
+
+    # Filter to only include food items
+    items = list(session.exec(statement).all())
+    return [item for item in items if is_food_item(item)]
 
 
 def get_expired_items(session: Session, household_id: int) -> List[Item]:
-    """Get expired items."""
+    """Get expired food items (non-food items excluded)."""
     statement = select(Item).where(
         Item.household_id == household_id,
         Item.expiry_date.isnot(None),
         Item.expiry_date < date.today()
     )
-    return list(session.exec(statement).all())
+
+    # Filter to only include food items
+    items = list(session.exec(statement).all())
+    return [item for item in items if is_food_item(item)]
 
 
 def get_location_hierarchy(session: Session, household_id: int) -> List[Location]:

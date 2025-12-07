@@ -5,10 +5,10 @@ CRITICAL: Extract ALL purchased items, do NOT miss any item!
 
 Rules:
 - name: Item name should be translate to Chinese.
-- category: Use Chinese categories (食品, 日用品, 清洁用品, etc.) Map all food related categories into 食品.
+- category: Use Chinese categories (食品, 日用品, 清洁用品, 工具, etc.) Map all food related categories into 食品.
 - location_path: Use Chinese hierarchical paths (冰箱 > 冷藏, 冰箱 > 冷冻, 厨房 > 橱柜, etc.)
-- acquired_date: Extract from receipt date (format: YYYY-MM-DD). Sanity check to do: the acquired date is less likely to be far apart from today, and should be within this year.
-- expiry_date: Infer based on category (Meat: +2 days, Produce: +5 days, Dairy: +7 days, Frozen: +90 days, Non-food: +3650 days/10 years) from now.
+- acquired_date: Extract from receipt date (format: YYYY-MM-DD in US format MM/DD/YYYY). Sanity check: the acquired date should be within this year and close to today.
+- expiry_date: CRITICAL - Only set for perishable items (食品 category). For non-perishable items (日用品, 清洁用品, 工具, etc.), set to null. For 食品: infer based on type (Meat: +2 days, Produce: +5 days, Dairy: +7 days, Frozen: +90 days) from acquired_date. Use YYYY-MM-DD format.
 - notes: Include store name (e.g., "Costco购入") and prices
 - Exclude: taxes, fees, payment info, subtotals
 - Tips: KSWTR is Kirkland drinking water. CA REDEMP VA should be NOT included as an item.
@@ -16,7 +16,7 @@ Rules:
 Output JSON only, no markdown, no explanations.
 
 Single Item Format:
-{"name": "有机牛奶", "category": "食物", "quantity": 1.0, "unit": "gallon", "location_path": "冰箱 > 冷藏", "acquired_date": "2025-01-15", "expiry_date": "2025-01-25", "notes": "Costco购入"}
+{"name": "有机牛奶", "category": "食品", "quantity": 1.0, "unit": "gallon", "location_path": "冰箱 > 冷藏", "acquired_date": "2025-01-15", "expiry_date": "2025-01-25", "notes": "Costco购入"}
 
 Multiple Items Format (use this for receipts):
-{"items": [{"name": "有机牛奶", "category": "乳制品", "quantity": 2.0, "unit": "gallon", "location_path": "冰箱 > 冷藏", "acquired_date": "2025-01-15", "expiry_date": "2025-01-25", "notes": "Costco购入"}, {"name": "鸡蛋", "category": "乳制品", "quantity": 18.0, "unit": "个", "location_path": "冰箱 > 冷藏", "acquired_date": "2025-01-15", "expiry_date": "2025-02-05", "notes": "Costco购入"}]}
+{"items": [{"name": "有机牛奶", "category": "食品", "quantity": 2.0, "unit": "gallon", "location_path": "冰箱 > 冷藏", "acquired_date": "2025-01-15", "expiry_date": "2025-01-25", "notes": "Costco购入"}, {"name": "洗洁精", "category": "清洁用品", "quantity": 1.0, "unit": "瓶", "location_path": "厨房 > 橱柜", "acquired_date": "2025-01-15", "expiry_date": null, "notes": "Costco购入"}]}
