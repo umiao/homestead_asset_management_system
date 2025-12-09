@@ -683,7 +683,7 @@
         // Set default acquired date to today
         document.getElementById('item-acquired').valueAsDate = new Date();
 
-        // Initialize autocomplete on first modal open
+        // Initialize autocomplete on first modal open (for both Add and Edit)
         if (!autocompleteInitialized && typeof initAutocomplete === 'function') {
             initializeAutocomplete();
             autocompleteInitialized = true;
@@ -700,6 +700,12 @@
         editingItemId = itemId;
         document.getElementById('item-modal').style.display = 'flex';
         document.getElementById('modal-title').textContent = 'Edit Item';
+
+        // Initialize autocomplete on first modal open (for both Add and Edit)
+        if (!autocompleteInitialized && typeof initAutocomplete === 'function') {
+            initializeAutocomplete();
+            autocompleteInitialized = true;
+        }
 
         // Populate form with existing data
         document.getElementById('item-name').value = item.name;

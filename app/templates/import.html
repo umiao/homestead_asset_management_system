@@ -2,6 +2,10 @@
 
 {% block title %}Import Data - PantryPilot{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/autocomplete.css">
+{% endblock %}
+
 {% block content %}
 <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Import Data</h1>
 
@@ -566,21 +570,21 @@
                                 <label class="form-label">Name / 名称 *</label>
                                 <input type="text" class="form-input" value="${item.name}" data-index="${index}" data-field="name" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="position: relative;">
                                 <label class="form-label">Category / 类别 *</label>
-                                <input type="text" class="form-input" value="${item.category}" data-index="${index}" data-field="category" required>
+                                <input type="text" id="ocr-category-${index}" class="form-input" value="${item.category}" data-index="${index}" data-field="category" autocomplete="off" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Quantity / 数量</label>
                                 <input type="number" class="form-input" value="${item.quantity}" data-index="${index}" data-field="quantity" step="0.1">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="position: relative;">
                                 <label class="form-label">Unit / 单位</label>
-                                <input type="text" class="form-input" value="${item.unit}" data-index="${index}" data-field="unit">
+                                <input type="text" id="ocr-unit-${index}" class="form-input" value="${item.unit}" data-index="${index}" data-field="unit" autocomplete="off">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="position: relative;">
                                 <label class="form-label">Location / 位置 *</label>
-                                <input type="text" class="form-input" value="${item.location_path}" data-index="${index}" data-field="location_path" required>
+                                <input type="text" id="ocr-location-${index}" class="form-input" value="${item.location_path}" data-index="${index}" data-field="location_path" autocomplete="off" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Acquired Date / 购买日期</label>
@@ -616,6 +620,42 @@
                 recognizedItems[index][field] = this.value;
             });
         });
+
+        // Initialize autocomplete for all items
+        initializeOCRAutocomplete(items.length);
+    }
+
+    /**
+     * Initialize autocomplete for OCR edit modal inputs
+     */
+    function initializeOCRAutocomplete(itemCount) {
+        if (typeof initAutocomplete !== 'function') {
+            console.warn('Autocomplete not available');
+            return;
+        }
+
+        for (let i = 0; i < itemCount; i++) {
+            // Initialize autocomplete for Category field
+            initAutocomplete(`ocr-category-${i}`, 'category', {
+                minChars: 0,
+                maxSuggestions: 10,
+                debounceMs: 150
+            });
+
+            // Initialize autocomplete for Unit field
+            initAutocomplete(`ocr-unit-${i}`, 'unit', {
+                minChars: 0,
+                maxSuggestions: 8,
+                debounceMs: 100
+            });
+
+            // Initialize autocomplete for Location Path field
+            initAutocomplete(`ocr-location-${i}`, 'location_path', {
+                minChars: 0,
+                maxSuggestions: 10,
+                debounceMs: 150
+            });
+        }
     }
 
     function closeOCREditModal() {
@@ -788,4 +828,7 @@
         }
     });
 </script>
+
+<!-- Autocomplete functionality -->
+<script src="/static/js/autocomplete.js"></script>
 {% endblock %}
