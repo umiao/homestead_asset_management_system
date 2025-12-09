@@ -16,6 +16,22 @@ from .. import crud
 from ..models import Item, ImportHistory
 from ..auth import get_current_user, require_permission
 
+
+# Category normalization mapping (sync with migrate_food_categories.py)
+CATEGORY_NORMALIZATION = {
+    "食物": "食品",
+    "food": "食品",
+    "Food": "食品",
+    "饮料": "食品",
+    "Drink": "食品",
+    "drinks": "食品",
+}
+
+
+def normalize_category(category: str) -> str:
+    """Normalize category names to consistent format."""
+    return CATEGORY_NORMALIZATION.get(category, category)
+
 # Import OCR service with error handling
 try:
     from ..services.llm_ocr import LLMOCRService
@@ -199,10 +215,13 @@ async def upload_receipt(
                     if item_data.get("expiry_date"):
                         expiry_date = parse_iso_date(item_data.get("expiry_date"))
 
+                    # Normalize category
+                    category = normalize_category(item_data.get("category", "其他"))
+
                     # Create item
                     item = Item(
                         name=item_data.get("name"),
-                        category=item_data.get("category"),
+                        category=category,
                         quantity=item_data.get("quantity", 1.0),
                         unit=item_data.get("unit", "count"),
                         location_id=location.id,
