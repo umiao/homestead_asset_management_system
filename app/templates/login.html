@@ -131,8 +131,9 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="/login" class="login-form">
+        <form method="POST" action="/login" class="login-form" id="loginForm">
             <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="password" id="hashedPassword">
 
             <div class="form-group">
                 <label for="username">Username</label>
@@ -151,8 +152,7 @@
                 <label for="password">Password</label>
                 <input
                     type="password"
-                    id="password"
-                    name="password"
+                    id="passwordInput"
                     required
                     autocomplete="current-password"
                     placeholder="Enter your password"
@@ -163,6 +163,58 @@
                 Sign In
             </button>
         </form>
+
+        <script>
+            // Hash password with SHA-256 and username-based salt before sending to server
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                console.log('[DEBUG] Form submit intercepted');
+
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('passwordInput');
+                const hashedPasswordField = document.getElementById('hashedPassword');
+                const encoder = new TextEncoder();
+
+                console.log('[DEBUG] Username:', usernameInput.value);
+                console.log('[DEBUG] Password length:', passwordInput.value.length);
+
+                try {
+                    // Step 1: Create salt from username: salt = SHA-256(username)
+                    const usernameData = encoder.encode(usernameInput.value);
+                    const saltBuffer = await crypto.subtle.digest('SHA-256', usernameData);
+                    const saltArray = Array.from(new Uint8Array(saltBuffer));
+                    const salt = saltArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                    console.log('[DEBUG] Salt:', salt);
+
+                    // Step 2: Combine password with salt: password + salt
+                    const saltedPassword = passwordInput.value + salt;
+
+                    // Step 3: Hash the salted password: SHA-256(password + salt)
+                    const saltedData = encoder.encode(saltedPassword);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', saltedData);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const finalHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                    console.log('[DEBUG] Final hash:', finalHash);
+
+                    // Set the final salted hash in hidden field
+                    hashedPasswordField.value = finalHash;
+
+                    // Clear the visible password field for security
+                    passwordInput.value = '';
+
+                    console.log('[DEBUG] Submitting form...');
+
+                    // Submit the form
+                    this.submit();
+                } catch (error) {
+                    console.error('[ERROR] Hashing failed:', error);
+                    alert('Login failed: ' + error.message);
+                }
+            });
+        </script>
     </div>
 </body>
 </html>

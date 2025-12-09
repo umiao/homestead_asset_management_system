@@ -2,20 +2,25 @@
 Authentication and Authorization Module
 
 Security features:
-- Password hashing with bcrypt (auto-salted)
+- Salted SHA-256 password hashing (salt = SHA-256(username))
+  * Client: SHA-256(password + SHA-256(username))
+  * Server: SHA-256(stored_password + SHA-256(username))
+  * Prevents rainbow table attacks and ensures unique hashes per user
 - Signed session cookies (itsdangerous)
 - HTTPS-only cookies (secure flag)
 - HTTP-only cookies (XSS protection)
+- Constant-time hash comparison (timing attack protection)
 - Role-based access control (admin/viewer)
+- Long-term sessions (365 days, logout required to end session)
 """
 import os
+import hashlib
 from typing import Optional
 from datetime import datetime, timedelta
 
 from fastapi import Cookie, HTTPException, status, Response, Depends, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from passlib.context import CryptContext
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
 from urllib.parse import quote
@@ -23,10 +28,7 @@ from urllib.parse import quote
 # Load environment variables
 load_dotenv()
 
-# Password hashing context (bcrypt with auto-salting)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# HTTP Basic Auth security (for initial login)
+# HTTP Basic Auth security (legacy, not used with current implementation)
 security = HTTPBasic()
 
 # Session serializer for signed cookies
@@ -35,8 +37,13 @@ SESSION_EXPIRY_HOURS = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
 serializer = Serializer(SECRET_KEY, expires_in=SESSION_EXPIRY_HOURS * 3600)
 
 # User configuration
-# Passwords are stored in plain text in .env and hashed during verification
-# This ensures consistent hashing behavior
+# Passwords are stored in plain text in .env
+# Salted hashing process:
+#   1. salt = SHA-256(username)
+#   2. Client sends: SHA-256(password + salt)
+#   3. Server computes: SHA-256(stored_password + salt)
+#   4. Compare using constant-time algorithm
+# This ensures different users with same password get different hashes
 USERS = {
     os.getenv("ADMIN_USERNAME", "admin"): {
         "password": os.getenv("ADMIN_PASSWORD", "admin123"),
@@ -53,18 +60,50 @@ USERS = {
 }
 
 
-def verify_password(plain_password: str, password_hash: str) -> bool:
+def sha256_hash(text: str) -> str:
     """
-    Verify password against bcrypt hash.
+    Compute SHA-256 hash of text.
 
     Args:
-        plain_password: Plain text password from user
-        password_hash: Bcrypt hash from database
+        text: Plain text to hash
 
     Returns:
-        True if password matches, False otherwise
+        Hexadecimal hash string
     """
-    return pwd_context.verify(plain_password, password_hash)
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def compute_salted_password_hash(username: str, password: str) -> str:
+    """
+    Compute salted password hash using username as salt.
+
+    Process:
+    1. salt = SHA-256(username)
+    2. salted_password = password + salt
+    3. final_hash = SHA-256(salted_password)
+
+    This ensures:
+    - Same password for different users produces different hashes
+    - Username acts as a deterministic salt
+    - No need to store salt separately
+
+    Args:
+        username: Username (used as salt base)
+        password: Plain text password
+
+    Returns:
+        Final salted hash (hexadecimal)
+    """
+    # Step 1: Create salt from username
+    salt = sha256_hash(username)
+
+    # Step 2: Combine password with salt
+    salted_password = password + salt
+
+    # Step 3: Hash the salted password
+    final_hash = sha256_hash(salted_password)
+
+    return final_hash
 
 
 def create_session_token(username: str) -> str:
@@ -101,13 +140,21 @@ def verify_session_token(token: str) -> Optional[dict]:
         return None
 
 
-def authenticate_user(username: str, password: str) -> Optional[dict]:
+def authenticate_user(username: str, password_hash: str) -> Optional[dict]:
     """
-    Authenticate user with username and password.
+    Authenticate user with username and salted password hash.
+
+    The client sends SHA-256(password + SHA-256(username)), and we
+    compute the same for the stored password and compare.
+
+    Process:
+    - Client: SHA-256(password + SHA-256(username))
+    - Server: SHA-256(stored_password + SHA-256(username))
+    - Compare with constant-time algorithm
 
     Args:
-        username: Username
-        password: Plain text password
+        username: Username (also used as salt base)
+        password_hash: Salted password hash from client
 
     Returns:
         User dict if authenticated, None otherwise
@@ -116,10 +163,12 @@ def authenticate_user(username: str, password: str) -> Optional[dict]:
     if not user:
         return None
 
-    # Direct password comparison (passwords stored in plain text in .env)
-    # Using secrets.compare_digest for timing attack protection
+    # Compute expected salted hash from stored password
+    expected_hash = compute_salted_password_hash(username, user["password"])
+
+    # Compare hashes using constant-time comparison (timing attack protection)
     import secrets
-    if not secrets.compare_digest(password, user["password"]):
+    if not secrets.compare_digest(password_hash, expected_hash):
         return None
 
     return {"username": username, **user}
